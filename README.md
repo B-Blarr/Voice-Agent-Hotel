@@ -1,13 +1,13 @@
 # Voice Agent Hotel
 
 **Nina** is the AI receptionist of *Hotel Elmblick*, a fictional family-run
-hotel in Schöningen, Lower Saxony. She answers the phone in German, answers
+hotel in Schöningen, Lower Saxony. She picks up the phone in German, answers
 questions about rooms, prices, breakfast, arrival and house rules, and takes
 callback requests for the team when a question needs a human.
 
 The conversation runs on **ElevenLabs Agents**. When Nina decides a callback
-is needed, she calls a webhook tool on my own server, where an **n8n**
-workflow validates the request and stores it in **PostgreSQL**. Everything on
+is needed, she uses a webhook tool that sends the request to my own server,
+where an **n8n** workflow validates it and stores it in **PostgreSQL**. Everything on
 the server runs in **Docker** behind **Nginx** on a Hostinger VPS.
 
 > **Status:** Nina works end to end in the ElevenLabs browser test, including
@@ -15,14 +15,19 @@ the server runs in **Docker** behind **Nginx** on a Hostinger VPS.
 > ordered from Telnyx and is waiting for the regulatory approval required for
 > German local numbers. Until then, the agent is not reachable by phone.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
+  <img alt="Architecture: caller and Telnyx or a browser test reach Nina on ElevenLabs. Her webhook tool calls Nginx on a Hostinger VPS, which forwards only /webhook/ to n8n. n8n writes to PostgreSQL. The n8n editor is reached through an SSH tunnel." src="docs/architecture-light.svg">
+</picture>
+
 ---
 
 ## Contents
 
 - [How it works](#how-it-works)
 - [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
 - [Security](#security)
 - [Setup](#setup)
 - [Testing the webhook](#testing-the-webhook)
@@ -32,6 +37,9 @@ the server runs in **Docker** behind **Nginx** on a Hostinger VPS.
 ---
 
 ## How it works
+
+The architecture above shows where each part runs. The sequence below follows
+a single callback request from the first question to the stored row.
 
 ```mermaid
 sequenceDiagram
@@ -57,6 +65,11 @@ sequenceDiagram
 Every stored request carries the ElevenLabs conversation ID (`anruf_id`), so
 each row in the database can be traced back to the call transcript.
 
+Field and table names are German because the hotel team works with the data:
+`rueckrufe` = callbacks, `telefon` = phone, `anliegen` = request,
+`erreichbar` = when to reach the caller, `gespeichert` = saved, `fehlt` = missing,
+`offen` / `erledigt` / `nicht_erreicht` = open / done / not reached.
+
 ---
 
 ## Features
@@ -71,21 +84,22 @@ each row in the database can be traced back to the call transcript.
   list of the missing fields, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
   `nicht_erreicht`
-- Honest by design: Nina says she is an AI, never confirms a booking, never
+- Honest by design: Nina introduces herself as an AI assistant, never confirms a booking, never
   promises a callback time and never claims to have saved something when the
   tool failed
-- Ends the call politely once the caller has said goodbye, and on silence
+- Ends the call politely after the caller says goodbye, or after 30 seconds of
+  silence
 - Cost limits: maximum call duration of five minutes and a monthly spending cap
 
 ---
 
-## Tech Stack
+## Tech stack
 
 | Component        | Used for                                                  |
 | ---------------- | --------------------------------------------------------- |
 | ElevenLabs Agents| Speech recognition, LLM, voice, webhook tool              |
 | n8n 2.43         | Webhook, validation and database insert                   |
-| PostgreSQL 16    | Callback requests (own database `hotel`)                  |
+| PostgreSQL 16    | Callback requests (separate database `hotel`)             |
 | Docker Compose   | Runs n8n and PostgreSQL on the server                     |
 | Nginx            | Reverse proxy, exposes only the webhook path              |
 | Let's Encrypt    | TLS certificate via certbot                               |
@@ -94,7 +108,7 @@ each row in the database can be traced back to the call transcript.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 Voice-Agent-Hotel/
@@ -102,6 +116,10 @@ Voice-Agent-Hotel/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
 │   └── tool_rueckruf_aufnehmen.json  # Webhook tool as exported from ElevenLabs
+├── docs/
+│   ├── architecture-light.svg      # Architecture diagram (light and dark)
+│   ├── architecture-dark.svg
+│   └── architecture.archify.json   # Diagram source, built with archify
 ├── n8n/
 │   └── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond
 ├── server/
@@ -126,13 +144,15 @@ Voice-Agent-Hotel/
   `127.0.0.1:5678`. This matters because Docker writes its own firewall rules
   in front of `ufw`; a plain `5678:5678` would be reachable from the internet
   even though `ufw` claims otherwise. PostgreSQL has no published port at all.
-- **Least privilege.** n8n writes with its own role `hotel_app`, which owns
-  only the database `hotel`. Connecting to n8n's internal database is revoked
-  for everyone else.
+- **Separate database role.** The workflow writes with its own role
+  `hotel_app` into its own database `hotel`, not with the superuser that n8n
+  uses internally. `CONNECT` on n8n's internal database is revoked from
+  `PUBLIC`, so `hotel_app` cannot read it.
 - **Secrets stay on the server.** `.env` with the database password and the
   n8n encryption key is never committed; see `server/.env.example`.
-- **Memory limits.** n8n is capped at 1 GB and PostgreSQL at 512 MB, so the
-  agent can never starve the other services on the same VPS.
+- **Memory limits.** n8n may use at most 1 GB of RAM and PostgreSQL 512 MB,
+  so the agent cannot take memory away from the other services on the same
+  VPS.
 
 ---
 
@@ -140,11 +160,14 @@ Voice-Agent-Hotel/
 
 ### 1. Server
 
-Requires Docker with the Compose plugin, Nginx and certbot.
+Requires Docker with the Compose plugin, Nginx and certbot with its Nginx
+plugin (`python3-certbot-nginx`). The files use my domain
+`n8n.benjaminblarr.de`; replace it with yours in `server/compose.yaml`,
+`server/nginx-n8n.conf` and `agent/tool_rueckruf_aufnehmen.json` first.
 
 ```bash
 sudo mkdir -p /opt/voice-agent && sudo chown $USER:$USER /opt/voice-agent
-# copy server/compose.yaml to /opt/voice-agent/
+# copy server/compose.yaml and server/nginx-n8n.conf to /opt/voice-agent/
 cd /opt/voice-agent
 ( umask 077; { echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"; \
   echo "N8N_ENCRYPTION_KEY=$(openssl rand -hex 32)"; } > .env )
@@ -152,7 +175,7 @@ sudo docker compose up -d
 curl -s http://127.0.0.1:5678/healthz   # {"status":"ok"}
 ```
 
-Adjust the domain in `compose.yaml` and `nginx-n8n.conf`, then:
+Then publish the webhook path through Nginx and get a certificate:
 
 ```bash
 sudo install -m 644 -o root -g root nginx-n8n.conf /etc/nginx/sites-available/n8n
@@ -189,6 +212,13 @@ Create an agent, paste `agent/system_prompt.md` as the system prompt and add
 `agent/tool_rueckruf_aufnehmen.json` and store the key as a secret header.
 Enable the system tool `end_call`.
 
+The first message greets the caller in the name of the hotel, introduces Nina
+as the AI assistant of the reception and mentions that the call is recorded.
+
+Limits used in this project: maximum call duration 300 seconds, end the call
+after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
+billing settings.
+
 ---
 
 ## Testing the webhook
@@ -202,7 +232,7 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
   -d '{"name":"Test","telefon":"05352 123456","anliegen":"Frage zur Anreise"}'
 # {"gespeichert":true,"id":6}
 
-# missing phone number: 400
+# blank name, no phone number: 400
 curl -s -X POST https://n8n.example.com/webhook/rueckruf \
   -H "Content-Type: application/json" -H "X-Elmblick-Key: $KEY" \
   -d '{"name":"   ","anliegen":"Test"}'
@@ -216,22 +246,22 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 ## Design decisions
 
 - **Nina takes every call, the team calls back.** She is the first point of
-  contact, not an overflow line. She never refers callers to the reception or
-  another number, and bookings go through the hotel website.
+  contact, not an overflow line. She never transfers callers or gives them
+  another number to call, and bookings go through the hotel website.
 - **Requests, not bookings.** Nina never confirms a room, a late check-out or
   an arrival after 22:00. She only says what actually happened.
 - **No payment data on the phone.** If a caller starts reading out card
   details, Nina interrupts politely.
 - **The caller hangs up first.** As at any good reception, Nina says goodbye
   once and ends the call only after the caller has said goodbye too.
-- **Fictional hotel, real place.** The hotel and all prices are invented, the
+- **Fictional hotel, real place.** The hotel and all prices are invented; the
   directions and surroundings of Schöningen are real.
 
 ---
 
 ## Roadmap
 
-1. **Live with information** (done except for the phone number):
+1. **Information and callbacks** (done, phone number pending):
    questions, callback requests, database
 2. **Availability and booking requests:** check free rooms for a period from a
    price table and record the request

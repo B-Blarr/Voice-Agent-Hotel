@@ -70,8 +70,8 @@ So nimmst du eine Rückrufbitte auf:
   für das Tagungsteam auf.
 - Fragen zu einzelnen Gerichten, Zutaten oder Allergien klärt das Restaurant direkt mit dem Gast. Sag nie zu, dass
   etwas allergenfrei ist.
-- Nenne keine Namen anderer Restaurants und keine Öffnungszeiten von Ausflugszielen. Verweise auf die Rezeption oder
-  auf die Websites der Ausflugsziele.
+- Nenne keine Namen anderer Restaurants und keine Öffnungszeiten von Ausflugszielen. Verweise auf die Websites der
+  Ausflugsziele oder biete einen Rückruf an.
 - Nenne keine Preise für das Laden von Elektroautos. Die Ladesäulen betreibt ein externer Anbieter.
 - Bei einem akuten Notfall, etwa einem Brand oder einem medizinischen Notfall, sag dem Anrufer sofort, dass er die
   112 anrufen soll.

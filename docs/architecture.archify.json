@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Voice Agent Hotel, architecture",
+    "subtitle": "Nina, the AI receptionist of the fictional Hotel Elmblick",
+    "quality_profile": "showcase",
+    "viewBox": [
+      980,
+      700
+    ],
+    "views": [
+      {
+        "id": "arrive",
+        "label": "How calls arrive",
+        "focus": [
+          "caller",
+          "telnyx",
+          "browser",
+          "agent"
+        ],
+        "note": "Today Nina is tested in the browser. The German number from Telnyx is ordered and waits for regulatory approval."
+      },
+      {
+        "id": "callback",
+        "label": "A callback request",
+        "focus": [
+          "agent",
+          "kb",
+          "tool",
+          "nginx",
+          "n8n",
+          "pg"
+        ],
+        "note": "Nina decides on her own to call the tool. Nginx passes only /webhook/, n8n validates and writes the row."
+      },
+      {
+        "id": "public",
+        "label": "What is public",
+        "focus": [
+          "tool",
+          "nginx",
+          "n8n",
+          "admin"
+        ],
+        "note": "From the internet only /webhook/ with the key gets through. The n8n editor is reached through an SSH tunnel only."
+      }
+    ],
+    "output": "architecture.html"
+  },
+  "components": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "phone",
+      "pos": [
+        40,
+        80
+      ],
+      "size": [
+        150,
+        72
+      ]
+    },
+    {
+      "id": "telnyx",
+      "type": "external",
+      "label": "Telnyx",
+      "sublabel": "05352 number, pending",
+      "pos": [
+        250,
+        80
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Browser test",
+      "sublabel": "ElevenLabs test call",
+      "pos": [
+        250,
+        230
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Nina",
+      "sublabel": "speech, LLM, voice",
+      "pos": [
+        510,
+        80
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "kb",
+      "type": "database",
+      "label": "Knowledge base",
+      "sublabel": "system prompt, house facts",
+      "pos": [
+        760,
+        80
+      ],
+      "size": [
+        180,
+        72
+      ]
+    },
+    {
+      "id": "tool",
+      "type": "backend",
+      "label": "Webhook tool",
+      "sublabel": "rueckruf_aufnehmen",
+      "pos": [
+        510,
+        230
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "security",
+      "label": "Nginx",
+      "sublabel": "TLS, only /webhook/",
+      "pos": [
+        510,
+        420
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "n8n",
+      "type": "backend",
+      "label": "n8n 2.43",
+      "sublabel": "Docker, 127.0.0.1:5678",
+      "pos": [
+        510,
+        570
+      ],
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "Docker, no public port",
+      "pos": [
+        760,
+        570
+      ],
+      "size": [
+        180,
+        72
+      ]
+    },
+    {
+      "id": "admin",
+      "type": "external",
+      "label": "Admin",
+      "sublabel": "SSH tunnel",
+      "pos": [
+        250,
+        570
+      ],
+      "size": [
+        170,
+        72
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "ElevenLabs Agents",
+      "wraps": [
+        "agent",
+        "kb",
+        "tool"
+      ],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "Hostinger VPS, Ubuntu 24.04",
+      "wraps": [
+        "nginx",
+        "n8n",
+        "pg"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "id": "caller-telnyx",
+      "from": "caller",
+      "to": "telnyx",
+      "label": "phone call",
+      "variant": "dashed"
+    },
+    {
+      "id": "telnyx-agent",
+      "from": "telnyx",
+      "to": "agent",
+      "label": "SIP trunk",
+      "variant": "dashed"
+    },
+    {
+      "id": "browser-agent",
+      "from": "browser",
+      "to": "agent",
+      "label": "test call",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "kb-agent",
+      "from": "kb",
+      "to": "agent",
+      "label": "context"
+    },
+    {
+      "id": "agent-tool",
+      "from": "agent",
+      "to": "tool",
+      "label": "tool call",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tool-nginx",
+      "from": "tool",
+      "to": "nginx",
+      "label": "HTTPS + key",
+      "variant": "security"
+    },
+    {
+      "id": "nginx-n8n",
+      "from": "nginx",
+      "to": "n8n",
+      "label": "/webhook/ only",
+      "variant": "emphasis"
+    },
+    {
+      "id": "n8n-pg",
+      "from": "n8n",
+      "to": "pg",
+      "label": "INSERT"
+    },
+    {
+      "id": "admin-n8n",
+      "from": "admin",
+      "to": "n8n",
+      "label": "editor",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "What the picture does not show",
+      "items": [
+        "incomplete requests get 400 and a list of missing fields",
+        "every row keeps the ElevenLabs conversation ID",
+        "every other path answers 404, the editor too",
+        "the webhook key is a secret the LLM never sees"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Limits",
+      "items": [
+        "a call ends after five minutes at the latest",
+        "30 seconds of silence end the call",
+        "monthly spending cap at ElevenLabs",
+        "n8n capped at 1 GB, PostgreSQL at 512 MB"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Status",
+      "items": [
+        "browser test works end to end, tool included",
+        "German local number ordered at Telnyx",
+        "waiting for the BNetzA registration check",
+        "stages 2 to 4 are on the roadmap"
+      ]
+    }
+  ]
+}

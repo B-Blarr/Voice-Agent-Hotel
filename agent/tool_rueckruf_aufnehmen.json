@@ -1,0 +1,103 @@
+{
+  "type": "webhook",
+  "name": "rueckruf_aufnehmen",
+  "description": "Speichert eine Rückrufbitte für das Team des Hotels. Erst aufrufen, wenn Name, Telefonnummer und Anliegen feststehen und der Anrufer die Telefonnummer bestätigt hat.",
+  "disable_interruptions": false,
+  "interruption_mode": "allow",
+  "force_pre_tool_speech": false,
+  "pre_tool_speech": "auto",
+  "tool_call_sound": null,
+  "tool_call_sound_behavior": "auto",
+  "tool_error_handling_mode": "auto",
+  "execution_mode": "immediate",
+  "follow_redirects": false,
+  "follow_redirects_allowed_domains": [],
+  "api_schema": {
+    "url": "https://n8n.benjaminblarr.de/webhook/rueckruf",
+    "method": "POST",
+    "path_params_schema": [],
+    "query_params_schema": [],
+    "request_body_schema": {
+      "id": "body",
+      "type": "object",
+      "description": "Die Angaben einer Rückrufbitte. Name, Telefonnummer und Anliegen müssen aus dem Gespräch stammen und vom Anrufer selbst genannt worden sein. Erfinde keine Werte und fülle kein Feld mit Platzhaltern.",
+      "properties": [
+        {
+          "id": "name",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Vor- und Nachname des Anrufers, so wie er ihn genannt hat.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "telefon",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Die vom Anrufer bestätigte Rückrufnummer mit Vorwahl, zum Beispiel 05352 123456.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "anliegen",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Das Anliegen in einem kurzen deutschen Satz.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "erreichbar",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Wann der Anrufer am besten erreichbar ist. Nur ausfüllen, wenn er es gesagt hat.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "anruf_id",
+          "type": "string",
+          "value_type": "dynamic_variable",
+          "description": "",
+          "dynamic_variable": "system__conversation_id",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        }
+      ],
+      "required": false,
+      "dynamic_variable": "",
+      "value_type": "llm_prompt"
+    },
+    "request_headers": [
+      {
+        "type": "secret",
+        "name": "X-Elmblick-Key",
+        "secret_id": "<your-elevenlabs-secret-id>"
+      }
+    ],
+    "content_type": "application/json",
+    "auth_connection": null,
+    "mtls_auth_connection": null,
+    "response_filter": null
+  },
+  "assignments": [],
+  "response_timeout_secs": 20,
+  "dynamic_variables": {
+    "dynamic_variable_placeholders": {}
+  },
+  "response_mocks": []
+}

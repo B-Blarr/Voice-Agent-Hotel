@@ -1,0 +1,55 @@
+# Voice agent Hotel Elmblick: n8n with its own PostgreSQL
+# On the VPS: /opt/voice-agent/compose.yaml
+# Secrets live in /opt/voice-agent/.env (server only, see .env.example)
+
+name: voice-agent
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in .env}
+      POSTGRES_DB: n8n
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    # Deliberately no "ports:". The database is only reachable inside the Docker network.
+
+  n8n:
+    image: n8nio/n8n:2.43.6
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY fehlt in .env}
+      N8N_HOST: n8n.benjaminblarr.de
+      N8N_PROTOCOL: https
+      N8N_WEBHOOK_URL: https://n8n.benjaminblarr.de/
+      N8N_PROXY_HOPS: 1
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      GENERIC_TIMEZONE: Europe/Berlin
+      TZ: Europe/Berlin
+    volumes:
+      - n8n_data:/home/node/.n8n
+    mem_limit: 1g
+
+volumes:
+  postgres_data:
+  n8n_data:

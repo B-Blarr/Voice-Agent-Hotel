@@ -1,0 +1,8 @@
+# Secrets and private documents never go into the repository
+.env
+*.env
+!*.env.example
+_privat/
+
+# Personal helper for the local SSH tunnel
+n8n_vps_oeffnen.cmd

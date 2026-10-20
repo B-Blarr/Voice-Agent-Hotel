@@ -128,7 +128,9 @@ Voice-Agent-Hotel/
 │   └── .env.example                # Required secrets, without values
 └── sql/
     ├── 001_hotel_database.sql      # Database, role and table for callback requests
-    └── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
+    ├── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
+    ├── 003_rooms_and_requests.sql  # Stage 2: room categories, rooms, occupancy, booking requests
+    └── 004_demo_data.sql           # Invented occupancy for testing availability
 ```
 
 ---
@@ -194,7 +196,8 @@ sudo docker compose exec postgres psql -U n8n -d n8n
 ```
 
 Then run the statements from `sql/001_hotel_database.sql` and after that
-`sql/002_least_privilege.sql` step by step. The password for `hotel_app` is
+`sql/002_least_privilege.sql` step by step. `sql/003_rooms_and_requests.sql`
+and `sql/004_demo_data.sql` prepare stage 2 of the roadmap. The password for `hotel_app` is
 set interactively with `\password`.
 
 ### 3. n8n
@@ -267,8 +270,10 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 
 1. **Information and callbacks** (done, phone number pending):
    questions, callback requests, database
-2. **Availability and booking requests:** check free rooms for a period from a
-   price table and record the request
+2. **Availability and booking requests** (in progress, database ready):
+   check free rooms for a period from a price table and record the request.
+   PostgreSQL itself refuses double bookings with an exclusion constraint on
+   the date range
 3. **Service during the stay:** wake-up calls, late check-out or a table in
    the restaurant as tasks for the team, based on the room number
 4. **Evaluation:** store every call via post-call webhook and analyse it with

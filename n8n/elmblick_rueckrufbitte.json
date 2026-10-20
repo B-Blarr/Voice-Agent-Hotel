@@ -27,6 +27,60 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d021ce30-710b-4864-a873-5b96a45bc21e",
+              "leftValue": "={{ String($json.body.name ?? '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c9f8749d-a808-4e4e-ab3b-33730833cafb",
+              "leftValue": "={{ String($json.body.telefon ?? '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "6e191890-dfe0-4855-a5bb-bc9e95522628",
+              "leftValue": "={{ String($json.body.anliegen ?? '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "2040401c-4521-431a-b830-035cef5341e5",
+      "name": "Check required fields"
+    },
+    {
+      "parameters": {
         "schema": {
           "__rl": true,
           "mode": "list",
@@ -137,7 +191,7 @@
         0
       ],
       "id": "a3fc5eee-8ec0-4097-8425-f1d9014c8b44",
-      "name": "Insert rows in a table",
+      "name": "Save callback",
       "credentials": {
         "postgres": {
           "id": "xU9433QDCD4sNqAz",
@@ -158,61 +212,7 @@
         0
       ],
       "id": "a86f0cd7-1e3b-4c3c-be3c-9b2de5cd2c29",
-      "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "d021ce30-710b-4864-a873-5b96a45bc21e",
-              "leftValue": "={{ ($json.body.name ?? '').trim() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            },
-            {
-              "id": "c9f8749d-a808-4e4e-ab3b-33730833cafb",
-              "leftValue": "={{ ($json.body.telefon ?? '').trim() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            },
-            {
-              "id": "6e191890-dfe0-4855-a5bb-bc9e95522628",
-              "leftValue": "={{ ($json.body.anliegen ?? '').trim() }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        224,
-        0
-      ],
-      "id": "2040401c-4521-431a-b830-035cef5341e5",
-      "name": "If"
+      "name": "Respond 200"
     },
     {
       "parameters": {
@@ -229,7 +229,7 @@
         208
       ],
       "id": "e34e8048-194f-41d1-953e-905f2edf5ed3",
-      "name": "Respond to Webhook1"
+      "name": "Respond 400 missing fields"
     }
   ],
   "pinData": {},
@@ -238,36 +238,36 @@
       "main": [
         [
           {
-            "node": "If",
+            "node": "Check required fields",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Insert rows in a table": {
+    "Check required fields": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Insert rows in a table",
+            "node": "Save callback",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "Respond 400 missing fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save callback": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
             "type": "main",
             "index": 0
           }
@@ -280,7 +280,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "1f4b9161-98d3-4398-904e-74a2b3a694b3",
+  "versionId": "7e818fdc-d8ae-4229-b5eb-21a2a34edd53",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"

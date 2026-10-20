@@ -127,7 +127,8 @@ Voice-Agent-Hotel/
 │   ├── nginx-n8n.conf              # Only /webhook/ is public
 │   └── .env.example                # Required secrets, without values
 └── sql/
-    └── 001_hotel_database.sql      # Database, role and table for callback requests
+    ├── 001_hotel_database.sql      # Database, role and table for callback requests
+    └── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
 ```
 
 ---
@@ -144,10 +145,12 @@ Voice-Agent-Hotel/
   `127.0.0.1:5678`. This matters because Docker writes its own firewall rules
   in front of `ufw`; a plain `5678:5678` would be reachable from the internet
   even though `ufw` claims otherwise. PostgreSQL has no published port at all.
-- **Separate database role.** The workflow writes with its own role
-  `hotel_app` into its own database `hotel`, not with the superuser that n8n
-  uses internally. `CONNECT` on n8n's internal database is revoked from
-  `PUBLIC`, so `hotel_app` cannot read it.
+- **Least privilege.** The workflow writes with its own role `hotel_app`,
+  not with the superuser that n8n uses internally. Database and table belong
+  to `hotel_owner`, a role without login. `hotel_app` may only `INSERT` and
+  `SELECT` on `rueckrufe`, so even with a stolen webhook key nothing can be
+  changed or deleted. `CONNECT` on n8n's internal database and on `postgres`
+  is revoked from `PUBLIC`.
 - **Secrets stay on the server.** `.env` with the database password and the
   n8n encryption key is never committed; see `server/.env.example`.
 - **Memory limits.** n8n may use at most 1 GB of RAM and PostgreSQL 512 MB,
@@ -190,8 +193,9 @@ sudo certbot --nginx -d n8n.example.com
 sudo docker compose exec postgres psql -U n8n -d n8n
 ```
 
-Then run the statements from `sql/001_hotel_database.sql` step by step. The
-password for `hotel_app` is set interactively with `\password`.
+Then run the statements from `sql/001_hotel_database.sql` and after that
+`sql/002_least_privilege.sql` step by step. The password for `hotel_app` is
+set interactively with `\password`.
 
 ### 3. n8n
 

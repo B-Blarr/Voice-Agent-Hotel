@@ -130,7 +130,9 @@ Voice-Agent-Hotel/
     ├── 001_hotel_database.sql      # Database, role and table for callback requests
     ├── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
     ├── 003_rooms_and_requests.sql  # Stage 2: room categories, rooms, occupancy, booking requests
-    └── 004_demo_data.sql           # Invented occupancy for testing availability
+    ├── 004_demo_data.sql           # Invented occupancy for testing availability
+    ├── 005_babies.sql              # Babies take no bed, at most one cot per room
+    └── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
 ```
 
 ---
@@ -197,7 +199,7 @@ sudo docker compose exec postgres psql -U n8n -d n8n
 
 Then run the statements from `sql/001_hotel_database.sql` and after that
 `sql/002_least_privilege.sql` step by step. `sql/003_rooms_and_requests.sql`
-and `sql/004_demo_data.sql` prepare stage 2 of the roadmap. The password for `hotel_app` is
+to `sql/006_availability_function.sql` prepare stage 2 of the roadmap. The password for `hotel_app` is
 set interactively with `\password`.
 
 ### 3. n8n

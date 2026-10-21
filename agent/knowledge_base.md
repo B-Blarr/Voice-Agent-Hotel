@@ -24,15 +24,26 @@ sind erfunden. Angaben zu Anfahrt und Umgebung sind echt (geprüft am 15.10.2026
 - Frühstück ist für Hotelgäste immer im Preis enthalten.
 - Die Preise gelten das ganze Jahr.
 - Doppelzimmer können auch allein gebucht werden.
+- 6 der 17 Doppelzimmer haben zwei getrennte Betten, die sich auch zusammenschieben lassen.
+- Drei Zimmer im Erdgeschoss sind barrierefrei, mit breiteren Türen und bodengleicher Dusche: ein Einzelzimmer und
+  zwei Doppelzimmer.
+- Das Haus hat drei Etagen: Erdgeschoss (Zimmer 101 bis 108), erster Stock (201 bis 209) und zweiter Stock (301 bis
+  308, dort auch die beiden Suiten). Es gibt einen Aufzug.
+- Etwa die Hälfte der Zimmer und beide Suiten haben Waldblick. Ein bestimmtes Zimmer, eine Etage oder den Waldblick
+  nimmt Nina als Wunsch auf, garantieren kann sie ihn nicht. Fest buchen lässt sich ein Zimmer mit Waldblick nur
+  online, dann mit 10 € Aufpreis pro Nacht (bei den Suiten inklusive).
 
 ## Kinder, Zustellbett und Babybett
 
-- Kinder bis 6 Jahre übernachten kostenlos im Zimmer der Eltern, das Frühstück ist ebenfalls kostenlos.
-- Zustellbetten gibt es im Doppelzimmer und in der Suite, nur für Kinder bis 12 Jahre.
-  - bis 6 Jahre: kostenlos
+- Babys bis 2 Jahre schlafen im Babybett. Babybetten gibt es für alle Zimmer, kostenlos, höchstens eins pro Zimmer.
+  Ein Baby braucht keinen eigenen Platz. Ein Erwachsener mit Baby kann also auch ein Einzelzimmer buchen.
+- Kinder von 3 bis 12 Jahren schlafen im Zustellbett. Zustellbetten gibt es im Doppelzimmer und in der Suite,
+  höchstens eins pro Zimmer. Im Einzelzimmer gibt es kein Zustellbett.
+  - 3 bis 6 Jahre: kostenlos, das Frühstück ebenfalls
   - 7 bis 12 Jahre: 25 € pro Nacht inklusive Frühstück
 - Ab 13 Jahren gibt es kein Zustellbett. Dann wird ein weiteres Zimmer benötigt.
-- Babybetten gibt es für alle Zimmer, kostenlos.
+- Ein Doppelzimmer oder eine Suite nimmt damit höchstens 2 Erwachsene, 1 Kind und 1 Baby auf. Größere Familien
+  brauchen zwei Zimmer. Passt keine Lösung, nimmt Nina eine Rückrufbitte auf.
 
 ## Rezeption, Check-in und Check-out
 

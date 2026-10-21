@@ -1,0 +1,196 @@
+{
+  "name": "Elmblick Verfügbarkeit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "verfuegbarkeit",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2b170b2f-d2b2-452e-af57-587a13afe9c2",
+      "name": "Webhook",
+      "webhookId": "c16046e4-c321-4d51-9f1a-3c4912751068",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8DDSO7wEmtNurO1o",
+          "name": "Elmblick Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? {};\nconst fehler = [];\n\n// A date must look like 2026-11-13 and really exist (no 31 February)\nconst istDatum = (s) =>\n  typeof s === 'string' &&\n  /^\\d{4}-\\d{2}-\\d{2}$/.test(s) &&\n  new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;\n\n// Today in German time, as 2026-10-21\nconst heute = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });\n\nconst anreise = body.anreise;\nconst abreise = body.abreise;\nconst erwachsene = Number(body.erwachsene);\nconst kinder = Number(body.kinder ?? 0);\nconst babys = Number(body.babys ?? 0);\n\nif (!istDatum(anreise)) fehler.push('anreise');\nif (!istDatum(abreise)) fehler.push('abreise');\nif (istDatum(anreise) && anreise < heute) fehler.push('anreise_in_vergangenheit');\nif (istDatum(anreise) && istDatum(abreise) && abreise <= anreise) fehler.push('abreise_nicht_nach_anreise');\nif (!Number.isInteger(erwachsene) || erwachsene < 1) fehler.push('erwachsene');\nif (!Number.isInteger(kinder) || kinder < 0) fehler.push('kinder');\nif (!Number.isInteger(babys) || babys < 0) fehler.push('babys');\n\nreturn [{\n  json: {\n    ok: fehler.length === 0,\n    fehler,\n    anreise,\n    abreise,\n    erwachsene,\n    kinder,\n    babys,\n    betten_getrennt: body.betten_getrennt === true,\n    barrierefrei: body.barrierefrei === true,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "54dae314-d985-4125-ae93-5cabeaa61340",
+      "name": "Check request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cb06b5a7-19c3-497a-b29c-a7a182b11580",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "7932ce54-3283-4310-a281-620ac24a258b",
+      "name": "Request ok?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        832,
+        -128
+      ],
+      "id": "2fdd823a-e86a-41d6-8ccf-1c23ead704ff",
+      "name": "Respond 200"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ fehler: $json.fehler }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        96
+      ],
+      "id": "10d48dcd-f400-43ea-b75b-b39d351baf66",
+      "name": "Respond 400"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT coalesce(json_agg(v), '[]'::json) AS kategorien\nFROM verfuegbarkeit($1::date, $2::date, $3::int, $4::int, $5::int, $6::boolean, $7::boolean) v;",
+        "options": {
+          "queryReplacement": "={{ $json.anreise }}, {{ $json.abreise }}, {{ $json.erwachsene }}, {{ $json.kinder }}, {{ $json.babys }}, {{ $json.betten_getrennt }}, {{ $json.barrierefrei }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        624,
+        -128
+      ],
+      "id": "b1f579fa-973d-4ec3-ab40-1eeebe921b78",
+      "name": "Check availability",
+      "credentials": {
+        "postgres": {
+          "id": "xU9433QDCD4sNqAz",
+          "name": "Hotel DB"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check request": {
+      "main": [
+        [
+          {
+            "node": "Request ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request ok?": {
+      "main": [
+        [
+          {
+            "node": "Check availability",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check availability": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "37c3e75c-2933-4baa-b302-d47546f30d9d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"
+  },
+  "nodeGroups": [],
+  "id": "LBmIbBqEGEVFhqFd",
+  "tags": []
+}

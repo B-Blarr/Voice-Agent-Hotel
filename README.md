@@ -121,7 +121,8 @@ Voice-Agent-Hotel/
 │   ├── architecture-dark.svg
 │   └── architecture.archify.json   # Diagram source, built with archify
 ├── n8n/
-│   └── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond
+│   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond
+│   └── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
 ├── server/
 │   ├── compose.yaml                # n8n + PostgreSQL
 │   ├── nginx-n8n.conf              # Only /webhook/ is public

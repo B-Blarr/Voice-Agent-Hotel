@@ -202,7 +202,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"gespeichert\": true, \"id\": {{ $json.id }} }",
+        "responseBody": "={ \"ok\": true, \"gespeichert\": true, \"id\": {{ $json.id }} }",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
@@ -217,10 +217,8 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "=  {{ JSON.stringify({ gespeichert: false, fehlt: ['name', 'telefon', 'anliegen'].filter(f => !String($json.body[f] ?? '').trim()) }) }}",
-        "options": {
-          "responseCode": 400
-        }
+        "responseBody": "={{ JSON.stringify({ ok: false, gespeichert: false, fehlt: ['name', 'telefon', 'anliegen'].filter(f => !String($json.body[f] ?? '').trim()) }) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
@@ -229,7 +227,7 @@
         208
       ],
       "id": "e34e8048-194f-41d1-953e-905f2edf5ed3",
-      "name": "Respond 400 missing fields"
+      "name": "Respond invalid"
     }
   ],
   "pinData": {},
@@ -256,7 +254,7 @@
         ],
         [
           {
-            "node": "Respond 400 missing fields",
+            "node": "Respond invalid",
             "type": "main",
             "index": 0
           }
@@ -280,7 +278,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "7e818fdc-d8ae-4229-b5eb-21a2a34edd53",
+  "versionId": "5f737ede-8565-4181-9978-fd70ed514d74",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"

@@ -87,25 +87,8 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ fehler: $json.fehler }) }}",
-        "options": {
-          "responseCode": 400
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        672,
-        96
-      ],
-      "id": "10d48dcd-f400-43ea-b75b-b39d351baf66",
-      "name": "Respond 400"
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT coalesce(json_agg(v), '[]'::json) AS kategorien\nFROM verfuegbarkeit($1::date, $2::date, $3::int, $4::int, $5::int, $6::boolean, $7::boolean) v;",
+        "query": "SELECT true AS ok, coalesce(json_agg(v), '[]'::json) AS kategorien\nFROM verfuegbarkeit($1::date, $2::date, $3::int, $4::int, $5::int, $6::boolean, $7::boolean) v;",
         "options": {
           "queryReplacement": "={{ $json.anreise }}, {{ $json.abreise }}, {{ $json.erwachsene }}, {{ $json.kinder }}, {{ $json.babys }}, {{ $json.betten_getrennt }}, {{ $json.barrierefrei }}"
         }
@@ -124,6 +107,21 @@
           "name": "Hotel DB"
         }
       }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, fehler: $json.fehler }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        96
+      ],
+      "id": "10d48dcd-f400-43ea-b75b-b39d351baf66",
+      "name": "Respond Invalid"
     }
   ],
   "pinData": {},
@@ -161,7 +159,7 @@
         ],
         [
           {
-            "node": "Respond 400",
+            "node": "Respond Invalid",
             "type": "main",
             "index": 0
           }
@@ -185,7 +183,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "37c3e75c-2933-4baa-b302-d47546f30d9d",
+  "versionId": "3c1dd898-8302-4c32-b485-706f73ee7242",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"

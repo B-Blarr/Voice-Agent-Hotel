@@ -1,0 +1,385 @@
+{
+  "name": "Elmblick Buchungsanfrage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "buchungsanfrage",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4a27bc79-5bc5-4a59-84d0-913ad81370e0",
+      "name": "Webhook",
+      "webhookId": "d71bd0c2-f1ae-4a5f-be49-9155a0a967c2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8DDSO7wEmtNurO1o",
+          "name": "Elmblick Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? {};\nconst fehler = [];\n\n// A date must look like 2026-11-13 and really exist\nconst istDatum = (s) =>\n  typeof s === 'string' &&\n  /^\\d{4}-\\d{2}-\\d{2}$/.test(s) &&\n  new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s;\n\n// Text fields: trimmed, or null when empty\nconst text = (v) => {\n  const t = String(v ?? '').trim();\n  return t === '' ? null : t;\n};\n\nconst heute = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });\n\nconst kategorie = text(body.kategorie)?.toLowerCase() ?? null;\nconst anreise = body.anreise;\nconst abreise = body.abreise;\nconst erwachsene = Number(body.erwachsene);\nconst kinder = Number(body.kinder ?? 0);\nconst babys = Number(body.babys ?? 0);\nconst name = text(body.name);\nconst telefon = text(body.telefon);\nconst email = text(body.email);\n\nif (!['einzelzimmer', 'doppelzimmer', 'suite'].includes(kategorie)) fehler.push('kategorie');\nif (!istDatum(anreise)) fehler.push('anreise');\nif (!istDatum(abreise)) fehler.push('abreise');\nif (istDatum(anreise) && anreise < heute) fehler.push('anreise_in_vergangenheit');\nif (istDatum(anreise) && istDatum(abreise) && abreise <= anreise) fehler.push('abreise_nicht_nach_anreise');\nif (!Number.isInteger(erwachsene) || erwachsene < 1) fehler.push('erwachsene');\nif (!Number.isInteger(kinder) || kinder < 0) fehler.push('kinder');\nif (!Number.isInteger(babys) || babys < 0 || babys > 1) fehler.push('babys');\nif (!name) fehler.push('name');\nif (!telefon && !email) fehler.push('telefon_oder_email');\n\nreturn [{\n  json: {\n    ok: fehler.length === 0,\n    fehler,\n    kategorie,\n    anreise,\n    abreise,\n    erwachsene,\n    kinder,\n    babys,\n    betten_getrennt: body.betten_getrennt === true,\n    barrierefrei: body.barrierefrei === true,\n    wuensche: text(body.wuensche),\n    name,\n    telefon,\n    email,\n    quelle: 'telefon',\n    anruf_id: text(body.anruf_id),\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "4f1f4cb1-de05-46a2-966b-77fd7a54898f",
+      "name": "Check request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5096a4c4-7f80-4ecf-bdb1-da928f82b0e4",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "af2d3008-9d3a-416d-a0e4-ddaa5d664d06",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "buchungsanfragen",
+          "mode": "list",
+          "cachedResultName": "buchungsanfragen"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "betten_getrennt": "={{ $json.betten_getrennt }}",
+            "barrierefrei": "={{ $json.barrierefrei }}",
+            "kategorie": "={{ $json.kategorie }}",
+            "anreise": "={{ $json.anreise }}",
+            "abreise": "={{ $json.abreise }}",
+            "erwachsene": "={{ $json.erwachsene }}",
+            "kinder": "={{ $json.kinder }}",
+            "wuensche": "={{ $json.wuensche }}",
+            "name": "={{ $json.name }}",
+            "telefon": "={{ $json.telefon }}",
+            "email": "={{ $json.email }}",
+            "quelle": "={{ $json.quelle }}",
+            "anruf_id": "={{ $json.anruf_id }}",
+            "babys": "={{ $json.babys }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "erstellt_am",
+              "displayName": "erstellt_am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "kategorie",
+              "displayName": "kategorie",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "anreise",
+              "displayName": "anreise",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "abreise",
+              "displayName": "abreise",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "erwachsene",
+              "displayName": "erwachsene",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kinder",
+              "displayName": "kinder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "betten_getrennt",
+              "displayName": "betten_getrennt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "barrierefrei",
+              "displayName": "barrierefrei",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "wuensche",
+              "displayName": "wuensche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefon",
+              "displayName": "telefon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quelle",
+              "displayName": "quelle",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "anruf_id",
+              "displayName": "anruf_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "babys",
+              "displayName": "babys",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "21d1ffb3-3334-4d9c-a972-e81923ed562e",
+      "name": "Save request",
+      "credentials": {
+        "postgres": {
+          "id": "xU9433QDCD4sNqAz",
+          "name": "Hotel DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"gespeichert\": true, \"id\": {{ $json.id }} }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "e196c47b-c6f3-4b4d-b80d-6d6866f2814d",
+      "name": "Respond 200"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, gespeichert: false, fehler: $json.fehler }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        96
+      ],
+      "id": "ce7a5bfa-1f65-40d5-9bb3-e35d3514ee05",
+      "name": "Respond Invalid"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Save request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save request": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3706e807-7947-4453-8998-9169dfc0c27a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"
+  },
+  "nodeGroups": [],
+  "id": "Di4vr0qUXzQrocVt",
+  "tags": []
+}

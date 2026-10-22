@@ -3,8 +3,8 @@
 **Nina** is the AI receptionist of *Hotel Elmblick*, a fictional family-run
 hotel in Schöningen, Lower Saxony. She picks up the phone in German, answers
 questions about rooms, prices, breakfast, arrival and house rules, checks
-which rooms are free for a stay and what it costs, and takes callback requests
-for the team when a question needs a human.
+which rooms are free for a stay and what it costs, records booking requests and
+takes callback requests for the team when a question needs a human.
 
 The conversation runs on **ElevenLabs Agents**, calls come in through a
 **Telnyx** SIP trunk. When Nina needs data, she uses webhook tools that call my
@@ -12,8 +12,8 @@ own server, where **n8n** workflows validate the request and query or write to
 **PostgreSQL**. Everything on the server runs in **Docker** behind **Nginx** on
 a Hostinger VPS.
 
-> **Status:** Nina is live under a German local number (05352, Schöningen) and
-> can check free rooms and take callback requests.
+> **Status:** Nina is live under a German local number (05352, Schöningen). She
+> checks free rooms, records booking requests and takes callback requests.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
@@ -80,6 +80,8 @@ Field and table names are German because the hotel team works with the data:
   - `verfuegbarkeit_pruefen` checks free rooms and the total price for a stay,
     based on dates, adults, children, babies and needs like separate beds or an
     accessible room
+  - `buchungsanfrage_aufnehmen` records a booking request for a free room
+    category, including wishes like a forest view, for the team to confirm
   - `rueckruf_aufnehmen` sends a callback request with name, phone number,
     request, availability and conversation ID
 - Dates like "next Friday" are turned into exact dates and read back for
@@ -120,6 +122,7 @@ Voice-Agent-Hotel/
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
+│   ├── tool_buchungsanfrage_aufnehmen.json # Webhook tool: booking request
 │   ├── tool_rueckruf_aufnehmen.json  # Webhook tool: callback request
 │   └── tool_verfuegbarkeit_pruefen.json # Webhook tool: free rooms and prices
 ├── docs/
@@ -127,6 +130,7 @@ Voice-Agent-Hotel/
 │   ├── architecture-dark.svg
 │   └── architecture.archify.json   # Diagram source, built with archify
 ├── n8n/
+│   ├── elmblick_buchungsanfrage.json # Workflow export: Webhook → Code check → If → Insert → Respond
 │   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond
 │   └── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
 ├── server/
@@ -218,16 +222,16 @@ create the owner account and two credentials:
 - **Postgres:** host `postgres`, database `hotel`, user `hotel_app`, SSL disabled
 - **Header Auth:** name `X-Elmblick-Key`, value from `openssl rand -hex 32`
 
-Import `n8n/elmblick_rueckrufbitte.json` and `n8n/elmblick_verfuegbarkeit.json`,
-assign the credentials and publish both workflows.
+Import the three workflows from `n8n/`, assign the credentials and publish
+them.
 
 ### 4. ElevenLabs
 
 Create an agent, paste `agent/system_prompt.md` as the system prompt and add
 `agent/knowledge_base.md` to the knowledge base. Set the timezone to
 `Europe/Berlin`, otherwise the agent does not know today's date. Create the
-webhook tools from `agent/tool_rueckruf_aufnehmen.json` and
-`agent/tool_verfuegbarkeit_pruefen.json` and store the key as a secret header.
+webhook tools from the three `agent/tool_*.json` files and store the key as a
+secret header.
 Enable the system tool `end_call`. Changes reach the phone only after
 **Publish**; the browser preview uses the draft.
 
@@ -281,9 +285,10 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
 
 - **Nina takes every call, the team calls back.** She is the first point of
   contact, not an overflow line. She never transfers callers or gives them
-  another number to call, and bookings go through the hotel website.
+  another number to call.
 - **Requests, not bookings.** Nina never confirms a room, a late check-out or
-  an arrival after 22:00. She only says what actually happened.
+  an arrival after 22:00. A booking request blocks no room; the team turns it
+  into a stay. She only says what actually happened.
 - **No payment data on the phone.** If a caller starts reading out card
   details, Nina interrupts politely.
 - **The caller hangs up first.** As at any good reception, Nina says goodbye
@@ -302,8 +307,8 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
 
 1. **Information and callbacks** (done, live by phone):
    questions, callback requests, database
-2. **Availability and booking requests** (in progress, database ready):
-   check free rooms for a period from a price table and record the request.
+2. **Availability and booking requests** (done): check free rooms for a
+   period from a price table and record the request.
    PostgreSQL itself refuses double bookings with an exclusion constraint on
    the date range
 3. **Service during the stay:** wake-up calls, late check-out or a table in

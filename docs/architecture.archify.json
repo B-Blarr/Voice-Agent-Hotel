@@ -19,11 +19,11 @@
           "browser",
           "agent"
         ],
-        "note": "Today Nina is tested in the browser. The German number from Telnyx is ordered and waits for regulatory approval."
+        "note": "Callers dial a German local number at Telnyx, which hands the call to Nina over a SIP trunk. Tests run in the browser."
       },
       {
         "id": "callback",
-        "label": "A callback request",
+        "label": "A tool call",
         "focus": [
           "agent",
           "kb",
@@ -32,7 +32,7 @@
           "n8n",
           "pg"
         ],
-        "note": "Nina decides on her own to call the tool. Nginx passes only /webhook/, n8n validates and writes the row."
+        "note": "Nina decides on her own which tool to call. Nginx passes only /webhook/, n8n validates and asks PostgreSQL."
       },
       {
         "id": "public",
@@ -67,7 +67,7 @@
       "id": "telnyx",
       "type": "external",
       "label": "Telnyx",
-      "sublabel": "05352 number, pending",
+      "sublabel": "05352 local number",
       "pos": [
         250,
         80
@@ -122,8 +122,8 @@
     {
       "id": "tool",
       "type": "backend",
-      "label": "Webhook tool",
-      "sublabel": "rueckruf_aufnehmen",
+      "label": "Webhook tools",
+      "sublabel": "callback, availability",
       "pos": [
         510,
         230
@@ -165,7 +165,7 @@
       "id": "pg",
       "type": "database",
       "label": "PostgreSQL 16",
-      "sublabel": "Docker, no public port",
+      "sublabel": "rooms, stays, requests",
       "pos": [
         760,
         570
@@ -218,14 +218,14 @@
       "from": "caller",
       "to": "telnyx",
       "label": "phone call",
-      "variant": "dashed"
+      "variant": "emphasis"
     },
     {
       "id": "telnyx-agent",
       "from": "telnyx",
       "to": "agent",
       "label": "SIP trunk",
-      "variant": "dashed"
+      "variant": "emphasis"
     },
     {
       "id": "browser-agent",
@@ -267,7 +267,7 @@
       "id": "n8n-pg",
       "from": "n8n",
       "to": "pg",
-      "label": "INSERT"
+      "label": "SQL"
     },
     {
       "id": "admin-n8n",
@@ -282,10 +282,10 @@
       "dot": "violet",
       "title": "What the picture does not show",
       "items": [
-        "incomplete requests get 400 and a list of missing fields",
+        "invalid input comes back as ok false with the reason",
         "every row keeps the ElevenLabs conversation ID",
         "every other path answers 404, the editor too",
-        "the webhook key is a secret the LLM never sees"
+        "PostgreSQL itself refuses double bookings"
       ]
     },
     {
@@ -302,10 +302,10 @@
       "dot": "cyan",
       "title": "Status",
       "items": [
-        "browser test works end to end, tool included",
-        "German local number ordered at Telnyx",
-        "waiting for the BNetzA registration check",
-        "stages 2 to 4 are on the roadmap"
+        "live on a German local number via Telnyx",
+        "checks free rooms and prices from PostgreSQL",
+        "takes callback requests",
+        "booking requests are next on the roadmap"
       ]
     }
   ]

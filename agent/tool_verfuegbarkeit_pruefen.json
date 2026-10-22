@@ -1,0 +1,125 @@
+{
+  "type": "webhook",
+  "name": "verfuegbarkeit_pruefen",
+  "description": "Prüft, welche Zimmerarten im gewünschten Zeitraum frei sind und was der Aufenthalt kostet. Erst aufrufen, wenn Anreise, Abreise und die Zahl der Erwachsenen feststehen.",
+  "disable_interruptions": false,
+  "interruption_mode": "allow",
+  "force_pre_tool_speech": false,
+  "pre_tool_speech": "auto",
+  "tool_call_sound": null,
+  "tool_call_sound_behavior": "auto",
+  "tool_error_handling_mode": "auto",
+  "execution_mode": "immediate",
+  "follow_redirects": false,
+  "follow_redirects_allowed_domains": [],
+  "api_schema": {
+    "url": "https://n8n.benjaminblarr.de/webhook/verfuegbarkeit",
+    "method": "POST",
+    "path_params_schema": [],
+    "query_params_schema": [],
+    "request_body_schema": {
+      "id": "body",
+      "type": "object",
+      "description": "Die Angaben für die Suche nach freien Zimmern. Anreise, Abreise und die Zahl der Personen müssen aus dem Gespräch stammen und vom Anrufer genannt oder bestätigt worden sein. Erfinde keine Werte. Kinder und Babys nur angeben, wenn der Anrufer sie erwähnt hat, sonst 0.",
+      "properties": [
+        {
+          "id": "anreise",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Anreisetag im Format JJJJ-MM-TT, zum Beispiel 2026-11-13.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "abreise",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Abreisetag im Format JJJJ-MM-TT. Das ist der Tag, an dem der Gast abreist, nicht der Tag der letzten Nacht.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "erwachsene",
+          "type": "integer",
+          "value_type": "llm_prompt",
+          "description": "Anzahl der Erwachsenen. Jugendliche ab 13 Jahren zählen als Erwachsene.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": true
+        },
+        {
+          "id": "kinder",
+          "type": "integer",
+          "value_type": "llm_prompt",
+          "description": "Anzahl der Kinder von 3 bis 12 Jahren. 0, wenn keine dabei sind.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "babys",
+          "type": "integer",
+          "value_type": "llm_prompt",
+          "description": "Anzahl der Babys bis 2 Jahre. 0, wenn keine dabei sind.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "betten_getrennt",
+          "type": "boolean",
+          "value_type": "llm_prompt",
+          "description": "true nur, wenn der Anrufer ausdrücklich getrennte Betten braucht.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        },
+        {
+          "id": "barrierefrei",
+          "type": "boolean",
+          "value_type": "llm_prompt",
+          "description": "true nur, wenn der Anrufer ein barrierefreies Zimmer braucht.",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "enum": null,
+          "is_system_provided": false,
+          "required": false
+        }
+      ],
+      "required": false,
+      "dynamic_variable": "",
+      "value_type": "llm_prompt"
+    },
+    "request_headers": [
+      {
+        "type": "secret",
+        "name": "X-Elmblick-Key",
+        "secret_id": "<your-elevenlabs-secret-id>"
+      }
+    ],
+    "content_type": "application/json",
+    "auth_connection": null,
+    "mtls_auth_connection": null,
+    "response_filter": null
+  },
+  "assignments": [],
+  "response_timeout_secs": 20,
+  "dynamic_variables": {
+    "dynamic_variable_placeholders": {}
+  },
+  "response_mocks": []
+}

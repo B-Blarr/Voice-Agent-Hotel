@@ -235,6 +235,16 @@ secret header.
 Enable the system tool `end_call`. Changes reach the phone only after
 **Publish**; the browser preview uses the draft.
 
+All three tools use forced pre-tool speech, so Nina says a short sentence such
+as "one moment, I'll check" before a tool call instead of going silent. A tool
+call sound was tested and left off: it only plays while the webhook runs, which
+takes less than a second here, and not while the LLM prepares the call or reads
+the result.
+
+So that a cough or a short "mhm" does not cut Nina off, the conversation
+settings ignore short interjections, filter background speech and keep the
+turn eagerness at normal.
+
 The first message greets the caller in the name of the hotel, introduces Nina
 as the AI assistant of the reception and mentions that the call is recorded.
 

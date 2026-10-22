@@ -58,7 +58,7 @@ sequenceDiagram
     W->>W: checks name, telefon, anliegen
     W->>D: INSERT INTO rueckrufe
     D-->>W: new row with id
-    W-->>N: gespeichert true, id 7
+    W-->>N: ok true, gespeichert true, id 7
     N->>C: Confirms that the callback request is recorded
 ```
 
@@ -80,8 +80,8 @@ Field and table names are German because the hotel team works with the data:
   and sends it to the webhook with name, phone number, request, availability
   and conversation ID
 - Phone numbers are always repeated digit by digit and confirmed before saving
-- Server-side validation: incomplete requests are rejected with `400` and a
-  list of the missing fields, so Nina can ask for exactly what is missing
+- Server-side validation: incomplete requests are answered with `ok: false`
+  and a list of the missing fields, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
   `nicht_erreicht`
 - Honest by design: Nina introduces herself as an AI assistant, never confirms a booking, never
@@ -240,13 +240,13 @@ read -s KEY   # paste the webhook key, nothing is shown
 curl -s -X POST https://n8n.example.com/webhook/rueckruf \
   -H "Content-Type: application/json" -H "X-Elmblick-Key: $KEY" \
   -d '{"name":"Test","telefon":"05352 123456","anliegen":"Frage zur Anreise"}'
-# {"gespeichert":true,"id":6}
+# {"ok":true,"gespeichert":true,"id":6}
 
-# blank name, no phone number: 400
+# blank name, no phone number: 200 with ok false
 curl -s -X POST https://n8n.example.com/webhook/rueckruf \
   -H "Content-Type: application/json" -H "X-Elmblick-Key: $KEY" \
   -d '{"name":"   ","anliegen":"Test"}'
-# {"gespeichert":false,"fehlt":["name","telefon"]}
+# {"ok":false,"gespeichert":false,"fehlt":["name","telefon"]}
 
 # without key: 403
 ```
@@ -264,6 +264,11 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
   details, Nina interrupts politely.
 - **The caller hangs up first.** As at any good reception, Nina says goodbye
   once and ends the call only after the caller has said goodbye too.
+- **Validation errors are answers, not failures.** ElevenLabs treats every
+  HTTP status from 400 upwards as a broken tool, and Nina then only hears
+  that the tool failed. A date in the past or a missing phone number is
+  something she can fix with the caller, so the workflows answer `200` with
+  `ok: false` and the reason. Real outages still surface as errors.
 - **Fictional hotel, real place.** The hotel and all prices are invented; the
   directions and surroundings of Schöningen are real.
 

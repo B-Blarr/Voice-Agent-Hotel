@@ -2,22 +2,22 @@
 
 **Nina** is the AI receptionist of *Hotel Elmblick*, a fictional family-run
 hotel in Schöningen, Lower Saxony. She picks up the phone in German, answers
-questions about rooms, prices, breakfast, arrival and house rules, and takes
-callback requests for the team when a question needs a human.
+questions about rooms, prices, breakfast, arrival and house rules, checks
+which rooms are free for a stay and what it costs, and takes callback requests
+for the team when a question needs a human.
 
-The conversation runs on **ElevenLabs Agents**. When Nina decides a callback
-is needed, she uses a webhook tool that sends the request to my own server,
-where an **n8n** workflow validates it and stores it in **PostgreSQL**. Everything on
-the server runs in **Docker** behind **Nginx** on a Hostinger VPS.
+The conversation runs on **ElevenLabs Agents**, calls come in through a
+**Telnyx** SIP trunk. When Nina needs data, she uses webhook tools that call my
+own server, where **n8n** workflows validate the request and query or write to
+**PostgreSQL**. Everything on the server runs in **Docker** behind **Nginx** on
+a Hostinger VPS.
 
-> **Status:** Nina works end to end in the ElevenLabs browser test, including
-> the callback tool. A local German phone number (05352, Schöningen) has been
-> ordered from Telnyx and is waiting for the regulatory approval required for
-> German local numbers. Until then, the agent is not reachable by phone.
+> **Status:** Nina is live under a German local number (05352, Schöningen) and
+> can check free rooms and take callback requests.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
-  <img alt="Architecture: caller and Telnyx or a browser test reach Nina on ElevenLabs. Her webhook tool calls Nginx on a Hostinger VPS, which forwards only /webhook/ to n8n. n8n writes to PostgreSQL. The n8n editor is reached through an SSH tunnel." src="docs/architecture-light.svg">
+  <img alt="Architecture: a caller reaches Nina on ElevenLabs through a Telnyx SIP trunk, tests run in the browser. Her webhook tools call Nginx on a Hostinger VPS, which forwards only /webhook/ to n8n. n8n reads from and writes to PostgreSQL. The n8n editor is reached through an SSH tunnel." src="docs/architecture-light.svg">
 </picture>
 
 ---
@@ -76,12 +76,17 @@ Field and table names are German because the hotel team works with the data:
 
 - Natural phone conversation in German
 - Answers based on a curated knowledge base of the hotel (`agent/knowledge_base.md`)
-- **Tool calling:** Nina decides on her own when a callback request is needed
-  and sends it to the webhook with name, phone number, request, availability
-  and conversation ID
+- **Tool calling:** Nina decides on her own when to use which tool:
+  - `verfuegbarkeit_pruefen` checks free rooms and the total price for a stay,
+    based on dates, adults, children, babies and needs like separate beds or an
+    accessible room
+  - `rueckruf_aufnehmen` sends a callback request with name, phone number,
+    request, availability and conversation ID
+- Dates like "next Friday" are turned into exact dates and read back for
+  confirmation; prices are taken exactly from the database
 - Phone numbers are always repeated digit by digit and confirmed before saving
-- Server-side validation: incomplete requests are answered with `ok: false`
-  and a list of the missing fields, so Nina can ask for exactly what is missing
+- Server-side validation: incomplete or impossible requests are answered with
+  `ok: false` and the reason, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
   `nicht_erreicht`
 - Honest by design: Nina introduces herself as an AI assistant, never confirms a booking, never
@@ -97,14 +102,14 @@ Field and table names are German because the hotel team works with the data:
 
 | Component        | Used for                                                  |
 | ---------------- | --------------------------------------------------------- |
-| ElevenLabs Agents| Speech recognition, LLM, voice, webhook tool              |
-| n8n 2.43         | Webhook, validation and database insert                   |
-| PostgreSQL 16    | Callback requests (separate database `hotel`)             |
+| ElevenLabs Agents| Speech recognition, LLM, voice, webhook tools             |
+| n8n 2.43         | Webhooks, validation, database queries                    |
+| PostgreSQL 16    | Rooms, occupancy, requests (separate database `hotel`)    |
 | Docker Compose   | Runs n8n and PostgreSQL on the server                     |
 | Nginx            | Reverse proxy, exposes only the webhook path              |
 | Let's Encrypt    | TLS certificate via certbot                               |
 | Ubuntu 24.04 VPS | Hostinger, shared with other projects                     |
-| Telnyx           | German local phone number via SIP trunk (pending)         |
+| Telnyx           | German local phone number via SIP trunk                   |
 
 ---
 
@@ -115,7 +120,8 @@ Voice-Agent-Hotel/
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
-│   └── tool_rueckruf_aufnehmen.json  # Webhook tool as exported from ElevenLabs
+│   ├── tool_rueckruf_aufnehmen.json  # Webhook tool: callback request
+│   └── tool_verfuegbarkeit_pruefen.json # Webhook tool: free rooms and prices
 ├── docs/
 │   ├── architecture-light.svg      # Architecture diagram (light and dark)
 │   ├── architecture-dark.svg
@@ -212,15 +218,18 @@ create the owner account and two credentials:
 - **Postgres:** host `postgres`, database `hotel`, user `hotel_app`, SSL disabled
 - **Header Auth:** name `X-Elmblick-Key`, value from `openssl rand -hex 32`
 
-Import `n8n/elmblick_rueckrufbitte.json`, assign the credentials and publish
-the workflow.
+Import `n8n/elmblick_rueckrufbitte.json` and `n8n/elmblick_verfuegbarkeit.json`,
+assign the credentials and publish both workflows.
 
 ### 4. ElevenLabs
 
 Create an agent, paste `agent/system_prompt.md` as the system prompt and add
-`agent/knowledge_base.md` to the knowledge base. Create the webhook tool from
-`agent/tool_rueckruf_aufnehmen.json` and store the key as a secret header.
-Enable the system tool `end_call`.
+`agent/knowledge_base.md` to the knowledge base. Set the timezone to
+`Europe/Berlin`, otherwise the agent does not know today's date. Create the
+webhook tools from `agent/tool_rueckruf_aufnehmen.json` and
+`agent/tool_verfuegbarkeit_pruefen.json` and store the key as a secret header.
+Enable the system tool `end_call`. Changes reach the phone only after
+**Publish**; the browser preview uses the draft.
 
 The first message greets the caller in the name of the hotel, introduces Nina
 as the AI assistant of the reception and mentions that the call is recorded.
@@ -228,6 +237,14 @@ as the AI assistant of the reception and mentions that the call is recorded.
 Limits used in this project: maximum call duration 300 seconds, end the call
 after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
 billing settings.
+
+### 5. Phone number
+
+At Telnyx, create an FQDN SIP connection to `sip.rtc.elevenlabs.io`, port
+`5060`, transport **TCP**, destination number format **+E.164**, and assign the
+number to it. In ElevenLabs, import the number from SIP trunk in exactly the
+same format (`+49…`), media encryption disabled, no authentication, and assign
+the agent.
 
 ---
 
@@ -249,6 +266,13 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 # {"ok":false,"gespeichert":false,"fehlt":["name","telefon"]}
 
 # without key: 403
+
+# availability for two adults
+curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
+  -H "Content-Type: application/json" -H "X-Elmblick-Key: $KEY" \
+  -d '{"anreise":"2026-11-13","abreise":"2026-11-15","erwachsene":2}'
+# {"ok":true,"kategorien":[{"kategorie":"doppelzimmer","freie_zimmer":0,...},
+#  {"kategorie":"suite","freie_zimmer":1,"naechte":2,"gesamtpreis":358,...}]}
 ```
 
 ---
@@ -276,7 +300,7 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 
 ## Roadmap
 
-1. **Information and callbacks** (done, phone number pending):
+1. **Information and callbacks** (done, live by phone):
    questions, callback requests, database
 2. **Availability and booking requests** (in progress, database ready):
    check free rooms for a period from a price table and record the request.

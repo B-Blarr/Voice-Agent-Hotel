@@ -153,17 +153,18 @@ Voice-Agent-Hotel/
 - **Only the webhook is public.** Nginx forwards `/webhook/` to n8n and answers
   every other path with `404`, including the editor, the login page and
   `/healthz`. The editor is opened through an SSH tunnel only.
-- **Shared secret.** The webhook uses n8n Header Auth (`X-Elmblick-Key`).
+- **Shared secret.** The webhooks use n8n Header Auth (`X-Elmblick-Key`).
   In ElevenLabs the key is stored as a secret, so the language model never
   sees it. Requests without the key get `403`.
 - **Ports bound to localhost.** Docker publishes n8n only on
   `127.0.0.1:5678`. This matters because Docker writes its own firewall rules
   in front of `ufw`; a plain `5678:5678` would be reachable from the internet
   even though `ufw` claims otherwise. PostgreSQL has no published port at all.
-- **Least privilege.** The workflow writes with its own role `hotel_app`,
-  not with the superuser that n8n uses internally. Database and table belong
-  to `hotel_owner`, a role without login. `hotel_app` may only `INSERT` and
-  `SELECT` on `rueckrufe`, so even with a stolen webhook key nothing can be
+- **Least privilege.** The workflows use their own role `hotel_app`,
+  not the superuser that n8n uses internally. Database and tables belong
+  to `hotel_owner`, a role without login. `hotel_app` may only read rooms and
+  occupancy, add and read callback and booking requests and run
+  `verfuegbarkeit()`, so even with a stolen webhook key nothing can be
   changed or deleted. `CONNECT` on n8n's internal database and on `postgres`
   is revoked from `PUBLIC`.
 - **Secrets stay on the server.** `.env` with the database password and the
@@ -181,7 +182,7 @@ Voice-Agent-Hotel/
 Requires Docker with the Compose plugin, Nginx and certbot with its Nginx
 plugin (`python3-certbot-nginx`). The files use my domain
 `n8n.benjaminblarr.de`; replace it with yours in `server/compose.yaml`,
-`server/nginx-n8n.conf` and `agent/tool_rueckruf_aufnehmen.json` first.
+`server/nginx-n8n.conf` and the three `agent/tool_*.json` files first.
 
 ```bash
 sudo mkdir -p /opt/voice-agent && sudo chown $USER:$USER /opt/voice-agent
@@ -210,7 +211,8 @@ sudo docker compose exec postgres psql -U n8n -d n8n
 
 Then run the statements from `sql/001_hotel_database.sql` and after that
 `sql/002_least_privilege.sql` step by step. `sql/003_rooms_and_requests.sql`
-to `sql/006_availability_function.sql` prepare stage 2 of the roadmap. The password for `hotel_app` is
+to `sql/006_availability_function.sql` add rooms, occupancy, booking requests
+and the availability function for stage 2. The password for `hotel_app` is
 set interactively with `\password`.
 
 ### 3. n8n

@@ -123,7 +123,7 @@
       "id": "tool",
       "type": "backend",
       "label": "Webhook tools",
-      "sublabel": "callback, availability",
+      "sublabel": "availability, booking, callback",
       "pos": [
         510,
         230
@@ -304,8 +304,8 @@
       "items": [
         "live on a German local number via Telnyx",
         "checks free rooms and prices from PostgreSQL",
-        "takes callback requests",
-        "booking requests are next on the roadmap"
+        "records booking requests for the team to confirm",
+        "takes callback requests"
       ]
     }
   ]

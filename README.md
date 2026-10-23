@@ -32,6 +32,7 @@ a Hostinger VPS.
 - [Setup](#setup)
 - [Testing the webhook](#testing-the-webhook)
 - [Design decisions](#design-decisions)
+- [Model choice](#model-choice)
 - [Roadmap](#roadmap)
 
 ---
@@ -319,6 +320,45 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
   `ok: false` and the reason. Real outages still surface as errors.
 - **Fictional hotel, real place.** The hotel and all prices are invented; the
   directions and surroundings of Schöningen are real.
+
+---
+
+## Model choice
+
+Nina's behaviour is checked with seven agent tests in ElevenLabs: two tool
+call tests for the parameters, three tests of a single answer and two
+simulations of a full call with mocked tools. Each test ran five times per
+model, with the same simulated caller and the same evaluator.
+
+| Test                                    | Sonnet 5.5 | Sonnet 5 | Haiku 5.5 |
+| --------------------------------------- | ---------- | -------- | --------- |
+| A 14-year-old counts as an adult        | 5/5        | 5/5      | 5/5       |
+| A wrong weekday is pointed out          | 5/5        | 1/5      | 5/5       |
+| Prices are taken exactly from the tool  | 5/5        | 5/5      | 5/5       |
+| Complete booking request                | 5/5        | 5/5      | 5/5       |
+| No invented web address                 | 5/5        | 5/5      | 2/5       |
+| No promise for an arrival after 22:00   | 5/5        | 5/5      | 5/5       |
+| Honest when saving fails                | 5/5        | 2/5      | 5/5       |
+| **Total**                               | **35/35**  | **28/35**| **32/35** |
+| LLM time before the availability check  | about 3.3 s| about 0.9 s | about 2.3 s |
+| Estimated LLM cost per minute           | $0.044     | $0.044   | $0.0022   |
+
+All three are Claude models. Sonnet 5 is much faster before the first tool
+call, but it accepted "Friday, 14 November" although that day is a Saturday,
+and it announced "I'm recording your request" right before saving failed.
+Haiku 5.5 passed the date and honesty tests at about a twentieth of the cost,
+but it kept telling callers that it was not allowed to give the web address.
+Depending on the exact wording of that rule it passed 2 to 5 of 5 runs, while
+Sonnet 5.5 passed every clear wording.
+
+Nina stays on Sonnet 5.5. For a demo with few calls the cost difference is about
+a dollar a month, and the forced pre-tool speech covers the longer pause. For
+a hotel with hundreds of calls a month, Haiku 5.5 would be the better trade.
+
+Three of the first failures were the evaluator and not the agent; once it
+even read the German article "ein" as a room count. Failed runs are therefore
+always read before they count, and criteria are written so that they cannot be
+misread.
 
 ---
 

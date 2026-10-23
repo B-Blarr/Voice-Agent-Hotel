@@ -40,40 +40,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "5096a4c4-7f80-4ecf-bdb1-da928f82b0e4",
-              "leftValue": "={{ $json.ok }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        448,
-        0
-      ],
-      "id": "af2d3008-9d3a-416d-a0e4-ddaa5d664d06",
-      "name": "If"
-    },
-    {
-      "parameters": {
         "schema": {
           "__rl": true,
           "mode": "list",
@@ -313,6 +279,65 @@
       ],
       "id": "ce7a5bfa-1f65-40d5-9bb3-e35d3514ee05",
       "name": "Respond Invalid"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5096a4c4-7f80-4ecf-bdb1-da928f82b0e4",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "af2d3008-9d3a-416d-a0e4-ddaa5d664d06",
+      "name": "Request ok?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Nina, Hotel Elmblick <nina@example.com>",
+        "toEmail": "team@example.com",
+        "subject": "=Neue Buchungsanfrage Nr. {{ $json.id }}: {{ $json.name }}",
+        "emailFormat": "text",
+        "text": "=Nina hat eine neue Buchungsanfrage aufgenommen.\n\nZimmerart: {{ $json.kategorie.charAt(0).toUpperCase() + $json.kategorie.slice(1) }}\nAnreise: {{ DateTime.fromISO($('Check request').item.json.anreise).toFormat('dd.MM.yyyy') }}\nAbreise: {{ DateTime.fromISO($('Check request').item.json.abreise).toFormat('dd.MM.yyyy') }}\nErwachsene: {{ $json.erwachsene }}, Kinder: {{ $json.kinder }}, Babys: {{ $json.babys }}\nGetrennte Betten: {{ $json.betten_getrennt ? 'ja' : 'nein' }}\nBarrierefrei: {{ $json.barrierefrei ? 'ja' : 'nein' }}\nWünsche: {{ $json.wuensche ?? 'keine' }}\n\nName: {{ $json.name }}\nTelefon: {{ $json.telefon ?? 'keine Angabe' }}\nE-Mail: {{ $json.email ?? 'keine Angabe' }}\n\nGesprächs-ID: {{ $json.anruf_id }}\n\nDie Anfrage ist noch nicht bestätigt. Bitte prüfen und den Gast zur Bestätigung kontaktieren.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "3b2f0a2a-db85-4086-82af-f84b0d0076df",
+      "name": "Send an Email",
+      "webhookId": "d81edb41-92ea-4561-bd70-283c30877bbf",
+      "credentials": {
+        "smtp": {
+          "id": "g14pWQza1ZgCY6l9",
+          "name": "Gmail Elmblick"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -332,14 +357,25 @@
       "main": [
         [
           {
-            "node": "If",
+            "node": "Request ok?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "Save request": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request ok?": {
       "main": [
         [
           {
@@ -357,11 +393,11 @@
         ]
       ]
     },
-    "Save request": {
+    "Respond 200": {
       "main": [
         [
           {
-            "node": "Respond 200",
+            "node": "Send an Email",
             "type": "main",
             "index": 0
           }
@@ -374,7 +410,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "3706e807-7947-4453-8998-9169dfc0c27a",
+  "versionId": "9c08a850-e635-455a-8815-63990dc86527",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"

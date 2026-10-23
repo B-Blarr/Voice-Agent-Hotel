@@ -96,7 +96,7 @@ Field and table names are German because the hotel team works with the data:
   tool failed
 - Ends the call politely after the caller says goodbye, or after 30 seconds of
   silence
-- Cost limits: maximum call duration of five minutes and a monthly spending cap
+- Cost limits: maximum call duration of eight minutes and a monthly spending cap
 
 ---
 
@@ -167,6 +167,13 @@ Voice-Agent-Hotel/
   `verfuegbarkeit()`, so even with a stolen webhook key nothing can be
   changed or deleted. `CONNECT` on n8n's internal database and on `postgres`
   is revoked from `PUBLIC`.
+- **Guardrails in ElevenLabs.** On top of the rules in the prompt, the
+  manipulation guardrail ends a call on prompt injection attempts, and content
+  guardrails block sexual, harassing, obscene or violent answers. They run in
+  streaming mode, so they add no delay. Categories that would hit normal hotel
+  questions stay off: medical and legal (allergies, cancellation terms),
+  politics and religion (the cathedral nearby) and self-harm, because a caller
+  in crisis should be referred to 112, not cut off.
 - **Secrets stay on the server.** `.env` with the database password and the
   n8n encryption key is never committed; see `server/.env.example`.
 - **Memory limits.** n8n may use at most 1 GB of RAM and PostgreSQL 512 MB,
@@ -250,7 +257,7 @@ turn eagerness at normal.
 The first message greets the caller in the name of the hotel, introduces Nina
 as the AI assistant of the reception and mentions that the call is recorded.
 
-Limits used in this project: maximum call duration 300 seconds, end the call
+Limits used in this project: maximum call duration 480 seconds, end the call
 after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
 billing settings.
 

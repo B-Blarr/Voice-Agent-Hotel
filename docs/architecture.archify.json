@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "viewBox": [
       980,
-      700
+      830
     ],
     "views": [
       {
@@ -30,9 +30,10 @@
           "tool",
           "nginx",
           "n8n",
-          "pg"
+          "pg",
+          "gmail"
         ],
-        "note": "Nina decides on her own which tool to call. Nginx passes only /webhook/, n8n validates and asks PostgreSQL."
+        "note": "Nina decides on her own which tool to call. Nginx passes only /webhook/, n8n validates, asks PostgreSQL and emails the team."
       },
       {
         "id": "public",
@@ -188,6 +189,20 @@
         170,
         72
       ]
+    },
+    {
+      "id": "gmail",
+      "type": "external",
+      "label": "Gmail",
+      "sublabel": "SMTP, team email",
+      "pos": [
+        510,
+        720
+      ],
+      "size": [
+        190,
+        72
+      ]
     }
   ],
   "boundaries": [
@@ -275,6 +290,14 @@
       "to": "n8n",
       "label": "editor",
       "variant": "security"
+    },
+    {
+      "id": "n8n-gmail",
+      "from": "n8n",
+      "to": "gmail",
+      "label": "new request",
+      "fromSide": "bottom",
+      "toSide": "top"
     }
   ],
   "cards": [
@@ -285,14 +308,15 @@
         "invalid input comes back as ok false with the reason",
         "every row keeps the ElevenLabs conversation ID",
         "every other path answers 404, the editor too",
-        "PostgreSQL itself refuses double bookings"
+        "PostgreSQL itself refuses double bookings",
+        "the team email goes out after Nina has her answer"
       ]
     },
     {
       "dot": "amber",
       "title": "Limits",
       "items": [
-        "a call ends after five minutes at the latest",
+        "a call ends after eight minutes at the latest",
         "30 seconds of silence end the call",
         "monthly spending cap at ElevenLabs",
         "n8n capped at 1 GB, PostgreSQL at 512 MB"

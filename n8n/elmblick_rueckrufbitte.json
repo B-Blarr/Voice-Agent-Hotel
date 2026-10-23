@@ -227,7 +227,32 @@
         208
       ],
       "id": "e34e8048-194f-41d1-953e-905f2edf5ed3",
-      "name": "Respond invalid"
+      "name": "Respond Invalid"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Nina, Hotel Elmblick <nina@example.com>",
+        "toEmail": "team@example.com",
+        "subject": "=Neue Rückrufbitte Nr. {{ $json.id }}: {{ $json.name }}",
+        "emailFormat": "text",
+        "text": "=Nina hat eine Rückrufbitte aufgenommen.\n\nName: {{ $json.name }}\nTelefon: {{ $json.telefon }}\nAnliegen: {{ $json.anliegen }}\nErreichbar: {{ $json.erreichbar || 'keine Angabe' }}\n\nGesprächs-ID: {{ $json.anruf_id }}\n\nBitte den Gast zurückrufen und die Rückrufbitte danach als erledigt markieren.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "458737f3-8387-41a1-b2b2-2a5aad8080ad",
+      "name": "Send an Email",
+      "webhookId": "70324217-9265-4215-96ba-dc4341468c18",
+      "credentials": {
+        "smtp": {
+          "id": "g14pWQza1ZgCY6l9",
+          "name": "Gmail Elmblick"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -254,7 +279,7 @@
         ],
         [
           {
-            "node": "Respond invalid",
+            "node": "Respond Invalid",
             "type": "main",
             "index": 0
           }
@@ -271,6 +296,17 @@
           }
         ]
       ]
+    },
+    "Respond 200": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -278,7 +314,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "5f737ede-8565-4181-9978-fd70ed514d74",
+  "versionId": "1cb95b7b-5422-4f2d-933e-4efcfd2b4e37",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"

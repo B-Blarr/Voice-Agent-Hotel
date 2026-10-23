@@ -88,6 +88,7 @@ Field and table names are German because the hotel team works with the data:
 - Dates like "next Friday" are turned into exact dates and read back for
   confirmation; prices are taken exactly from the database
 - Phone numbers are always repeated digit by digit and confirmed before saving
+- Every booking request and callback request is emailed to the team right away
 - Server-side validation: incomplete or impossible requests are answered with
   `ok: false` and the reason, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
@@ -113,6 +114,7 @@ Field and table names are German because the hotel team works with the data:
 | Let's Encrypt    | TLS certificate via certbot                               |
 | Ubuntu 24.04 VPS | Hostinger, shared with other projects                     |
 | Telnyx           | German local phone number via SIP trunk                   |
+| Gmail (SMTP)     | Notification emails to the team                           |
 
 ---
 
@@ -131,8 +133,8 @@ Voice-Agent-Hotel/
 │   ├── architecture-dark.svg
 │   └── architecture.archify.json   # Diagram source, built with archify
 ├── n8n/
-│   ├── elmblick_buchungsanfrage.json # Workflow export: Webhook → Code check → If → Insert → Respond
-│   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond
+│   ├── elmblick_buchungsanfrage.json # Workflow export: Webhook → Code check → If → Insert → Respond → Email
+│   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond → Email
 │   └── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
 ├── server/
 │   ├── compose.yaml                # n8n + PostgreSQL
@@ -227,13 +229,16 @@ set interactively with `\password`.
 
 Open the editor through the tunnel
 (`ssh -N -L 15678:127.0.0.1:5678 <server>`, then `http://localhost:15678`),
-create the owner account and two credentials:
+create the owner account and three credentials:
 
 - **Postgres:** host `postgres`, database `hotel`, user `hotel_app`, SSL disabled
 - **Header Auth:** name `X-Elmblick-Key`, value from `openssl rand -hex 32`
+- **SMTP:** for Gmail host `smtp.gmail.com`, port `465`, SSL on, and an app
+  password instead of the account password
 
-Import the three workflows from `n8n/`, assign the credentials and publish
-them.
+Import the three workflows from `n8n/`, assign the credentials, set the
+sender and the team address in the two Send Email nodes (`nina@example.com`,
+`team@example.com` in the exports) and publish them.
 
 ### 4. ElevenLabs
 
@@ -311,6 +316,10 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
   into a stay. She only says what actually happened.
 - **No payment data on the phone.** If a caller starts reading out card
   details, Nina interrupts politely.
+- **The email comes after the answer.** The Send Email node sits behind the
+  Respond node, so Nina never waits for the mail server, and a failed email
+  cannot turn a saved request into an error for the caller. It still shows up
+  as a failed execution in n8n.
 - **The caller hangs up first.** As at any good reception, Nina says goodbye
   once and ends the call only after the caller has said goodbye too.
 - **Validation errors are answers, not failures.** ElevenLabs treats every

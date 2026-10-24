@@ -1,0 +1,4 @@
+# GitHub counts SQL as data and hides it from the language bar.
+# The SQL here holds real logic (schema, permissions, availability),
+# so it should count as code.
+*.sql linguist-detectable=true

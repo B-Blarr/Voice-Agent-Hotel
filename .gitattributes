@@ -2,3 +2,4 @@
 # The SQL here holds real logic (schema, permissions, availability),
 # so it should count as code.
 *.sql linguist-detectable=true
+* text=auto eol=lf

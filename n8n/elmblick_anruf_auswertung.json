@@ -1,0 +1,382 @@
+{
+  "name": "Elmblick Anruf-Auswertung",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "anruf-ende",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ac32dd15-3723-48e5-ad93-1b5799974655",
+      "name": "Webhook",
+      "webhookId": "c511bc42-e180-442c-807c-e3e95e27247e"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst header = item.json.headers['elevenlabs-signature'] ?? '';\n\n// Header looks like: t=1793043221,v0=f56f4e04...\nconst teile = Object.fromEntries(\n  header.split(',').map((teil) => teil.split('='))\n);\n\n// The raw body exactly as ElevenLabs sent it\nconst roh = (await this.helpers.getBinaryDataBuffer(0, 'data')).toString('utf8');\n\nreturn [{\n  json: {\n    t: teile.t ?? null,\n    v0: teile.v0 ? 'v0=' + teile.v0 : null,\n    signiert: `${teile.t}.${roh}`,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "5d9e79fb-14db-49ef-a54c-3fe0045d788f",
+      "name": "Prepare signature"
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "value": "={{ $json.signiert }}",
+        "dataPropertyName": "berechnet"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0b4729d1-eaf7-4e4f-9f80-37f8bd1218bd",
+      "name": "Crypto",
+      "credentials": {
+        "crypto": {
+          "id": "6yZ6XuVcIJsSy5Kx",
+          "name": "ElevenLabs Webhook Secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1376,
+        -144
+      ],
+      "id": "85c010ef-2ce0-4ff9-bd36-5eabc3919e25",
+      "name": "Respond 200"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pruefung = $input.first().json;\nconst body = $('Webhook').first().json.body;\n\n// 1. Is the signature right, and is the message fresh?\nconst echt = pruefung.v0 === 'v0=' + pruefung.berechnet;\nconst alter = Math.abs(Date.now() / 1000 - Number(pruefung.t));\nconst frisch = alter < 30 * 60;\n\nif (!echt || !frisch) {\n  return [{ json: { ok: false, grund: !echt ? 'signatur_falsch' : 'zu_alt' } }];\n}\n\n// 2. Take only the fields we store, everything else is dropped\nconst d = body.data ?? {};\nconst m = d.metadata ?? {};\nconst a = d.analysis ?? {};\n\nreturn [{\n  json: {\n    ok: true,\n    anruf_id: d.conversation_id,\n    beginn: new Date(m.start_time_unix_secs * 1000).toISOString(),\n    dauer_sek: m.call_duration_secs,\n    kosten_credits: m.cost ?? null,\n    kosten_usd: m.cost_fiat ?? null,\n    kanal: m.conversation_initiation_source ?? 'unbekannt',\n    beendet_durch: m.termination_reason ?? null,\n    erfolgreich: a.call_successful ?? null,\n    titel: a.call_summary_title ?? null,\n    stimmung: a.sentiment_analysis?.overall_label ?? null,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "fd1826f7-66b9-4555-a5cd-f99fabefb521",
+      "name": "Check and extract"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "anrufe",
+          "mode": "list",
+          "cachedResultName": "anrufe"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "anruf_id": "={{ $json.anruf_id }}",
+            "dauer_sek": "={{ $json.dauer_sek }}",
+            "beginn": "={{ $json.beginn }}",
+            "kosten_credits": "={{ $json.kosten_credits }}",
+            "kosten_usd": "={{ $json.kosten_usd }}",
+            "kanal": "={{ $json.kanal }}",
+            "beendet_durch": "={{ $json.beendet_durch }}",
+            "erfolgreich": "={{ $json.erfolgreich }}",
+            "titel": "={{ $json.titel }}",
+            "stimmung": "={{ $json.stimmung }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "anruf_id",
+              "displayName": "anruf_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "beginn",
+              "displayName": "beginn",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dauer_sek",
+              "displayName": "dauer_sek",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kosten_credits",
+              "displayName": "kosten_credits",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kosten_usd",
+              "displayName": "kosten_usd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "kanal",
+              "displayName": "kanal",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "beendet_durch",
+              "displayName": "beendet_durch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "erfolgreich",
+              "displayName": "erfolgreich",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "titel",
+              "displayName": "titel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stimmung",
+              "displayName": "stimmung",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "eingegangen_am",
+              "displayName": "eingegangen_am",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "53f23129-3f94-401c-ae01-9aec721ff80c",
+      "name": "Save call",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "xU9433QDCD4sNqAz",
+          "name": "Hotel DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "f421144d-f798-42e7-a131-abef40d430ab",
+      "name": "Respond 401"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "aab5a27d-cd08-40eb-9240-1e69c722b2cd",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        0
+      ],
+      "id": "52378fef-1ba9-4729-b635-df7a943c860a",
+      "name": "Signature ok?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare signature": {
+      "main": [
+        [
+          {
+            "node": "Crypto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto": {
+      "main": [
+        [
+          {
+            "node": "Check and extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check and extract": {
+      "main": [
+        [
+          {
+            "node": "Signature ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save call": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signature ok?": {
+      "main": [
+        [
+          {
+            "node": "Save call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b0e33ade-4542-46ee-a6d5-7e2c5487900b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"
+  },
+  "nodeGroups": [],
+  "id": "WFSsTXkWIsd5NSWt",
+  "tags": []
+}

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    name: Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # A fresh PostgreSQL 16, like the n8n stack on the server.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: n8n
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: n8n
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U n8n"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: n8n
+      PGPASSWORD: ci
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Every migration in order, like on the server. 001 sets the password
+      # with \password, which needs a keyboard, so CI sets a throwaway one.
+      - name: Apply migrations
+        run: |
+          for f in sql/0*.sql; do
+            echo "::group::$f"
+            case "$f" in
+              sql/001_*|sql/002_*) db=n8n ;;
+              *) db=hotel ;;
+            esac
+            sed "s/^\\\\password hotel_app$/ALTER ROLE hotel_app PASSWORD 'ci';/" "$f" \
+              | psql -v ON_ERROR_STOP=1 -d "$db" -f -
+            echo "::endgroup::"
+          done
+
+      - name: Run SQL tests
+        run: |
+          for f in tests/*.sql; do
+            echo "::group::$f"
+            psql -v ON_ERROR_STOP=1 -d hotel -f "$f"
+            echo "::endgroup::"
+          done

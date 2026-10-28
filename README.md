@@ -9,11 +9,15 @@ takes callback requests for the team when a question needs a human.
 The conversation runs on **ElevenLabs Agents**, calls come in through a
 **Telnyx** SIP trunk. When Nina needs data, she uses webhook tools that call my
 own server, where **n8n** workflows validate the request and query or write to
-**PostgreSQL**. Everything on the server runs in **Docker** behind **Nginx** on
-a Hostinger VPS.
+**PostgreSQL**. After every call, ElevenLabs sends a signed post-call webhook,
+and n8n stores duration, cost and channel, so the calls can be evaluated with
+SQL. Everything on the server runs in **Docker** behind **Nginx** on a
+Hostinger VPS.
 
 > **Status:** Nina is live under a German local number (05352, Schöningen). She
 > checks free rooms, records booking requests and takes callback requests.
+> Every call is stored for evaluation, and requests with names and phone numbers
+> are deleted from the database after 30 days.
 
 ---
 
@@ -21,7 +25,7 @@ a Hostinger VPS.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
-  <img alt="Architecture: a caller reaches Nina on ElevenLabs through a Telnyx SIP trunk, tests run in the browser. Her webhook tools call Nginx on a Hostinger VPS, which forwards only /webhook/ to n8n. n8n reads from and writes to PostgreSQL and emails the team through Gmail. The n8n editor is reached through an SSH tunnel." src="docs/architecture-light.svg">
+  <img alt="Architecture: a caller reaches Nina on ElevenLabs through a Telnyx SIP trunk, tests run in the browser. Her webhook tools call Nginx on a Hostinger VPS, which forwards only /webhook/ to n8n. After every call, ElevenLabs sends a signed post-call webhook along the same path. n8n reads from and writes to PostgreSQL and emails the team through Gmail. The n8n editor is reached through an SSH tunnel." src="docs/architecture-light.svg">
 </picture>
 
 ---
@@ -36,6 +40,7 @@ a Hostinger VPS.
 - [Setup](#setup)
 - [Testing the webhook](#testing-the-webhook)
 - [Design decisions](#design-decisions)
+- [Evaluation](#evaluation)
 - [Model choice](#model-choice)
 - [Roadmap](#roadmap)
 
@@ -93,6 +98,12 @@ Field and table names are German because the hotel team works with the data:
   confirmation; prices are taken exactly from the database
 - Phone numbers are always repeated digit by digit and confirmed before saving
 - Every booking request and callback request is emailed to the team right away
+- Every call is logged through a signed post-call webhook with duration, cost,
+  channel and how it ended, without the caller's number or the transcript
+- What a call led to (booking request, callback or information only) follows
+  from the data itself, see [Evaluation](#evaluation)
+- Booking and callback requests are deleted from the database after 30 days,
+  calls after 90 days
 - Server-side validation: incomplete or impossible requests are answered with
   `ok: false` and the reason, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
@@ -111,8 +122,8 @@ Field and table names are German because the hotel team works with the data:
 | Component        | Used for                                                  |
 | ---------------- | --------------------------------------------------------- |
 | ElevenLabs Agents| Speech recognition, LLM, voice, webhook tools             |
-| n8n 2.43         | Webhooks, validation, database queries                    |
-| PostgreSQL 16    | Rooms, occupancy, requests (separate database `hotel`)    |
+| n8n 2.43         | Webhooks, validation, database queries, nightly cleanup   |
+| PostgreSQL 16    | Rooms, occupancy, requests, calls (database `hotel`)      |
 | Docker Compose   | Runs n8n and PostgreSQL on the server                     |
 | Nginx            | Reverse proxy, exposes only the webhook path              |
 | Let's Encrypt    | TLS certificate via certbot                               |
@@ -137,6 +148,8 @@ Voice-Agent-Hotel/
 │   ├── architecture-dark.svg
 │   └── architecture.archify.json   # Diagram source, built with archify
 ├── n8n/
+│   ├── elmblick_anruf_auswertung.json # Workflow export: post-call webhook → HMAC check → Insert → Respond
+│   ├── elmblick_aufraeumen.json    # Workflow export: every night at 03:15 → alte_daten_loeschen()
 │   ├── elmblick_buchungsanfrage.json # Workflow export: Webhook → Code check → If → Insert → Respond → Email
 │   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond → Email
 │   └── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
@@ -150,7 +163,10 @@ Voice-Agent-Hotel/
     ├── 003_rooms_and_requests.sql  # Stage 2: room categories, rooms, occupancy, booking requests
     ├── 004_demo_data.sql           # Invented occupancy for testing availability
     ├── 005_babies.sql              # Babies take no bed, at most one cot per room
-    └── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
+    ├── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
+    ├── 007_calls.sql               # Stage 4: one row per call from the post-call webhook
+    ├── 008_call_results.sql        # View anruf_ergebnisse: what each call led to
+    └── 009_retention.sql           # alte_daten_loeschen(): requests after 30 days, calls after 90
 ```
 
 ---
@@ -170,10 +186,29 @@ Voice-Agent-Hotel/
 - **Least privilege.** The workflows use their own role `hotel_app`,
   not the superuser that n8n uses internally. Database and tables belong
   to `hotel_owner`, a role without login. `hotel_app` may only read rooms and
-  occupancy, add and read callback and booking requests and run
-  `verfuegbarkeit()`, so even with a stolen webhook key nothing can be
-  changed or deleted. `CONNECT` on n8n's internal database and on `postgres`
+  occupancy, add and read requests and calls, run `verfuegbarkeit()` and
+  run `alte_daten_loeschen()`. A stolen webhook key only allows adding
+  requests. Even the password of `hotel_app` allows no `UPDATE` or `DELETE`;
+  the only thing it can delete is data past its retention period anyway. `CONNECT` on n8n's internal database and on `postgres`
   is revoked from `PUBLIC`.
+- **Signed post-call webhook.** ElevenLabs cannot send a custom header after a
+  call, so it signs every message instead (HMAC-SHA256 over timestamp and raw
+  body). n8n recalculates the signature with the shared secret, which lives in
+  an encrypted n8n credential, and rejects tampered messages and messages older
+  than 30 minutes with `401`. Both cases were tested by replaying a real call.
+- **Data minimisation.** Even with the transcript excluded in ElevenLabs, the
+  post-call webhook still carries the conversation history in a system
+  variable, a summary and the caller's number. Only ten fields are stored: no
+  number, no history and no summary, because the summary names the caller.
+  The short title also comes from the LLM and may contain a name, which is
+  why calls are deleted after 90 days. n8n does not keep successful executions
+  of this workflow; failed ones stay for debugging until n8n prunes them.
+- **Retention.** `alte_daten_loeschen()` deletes booking and callback requests
+  after 30 days and calls after 90 days. It runs every night as `hotel_app`
+  but with the rights of its owner (`SECURITY DEFINER` with a fixed
+  `search_path`), so `hotel_app` still cannot delete a single row on its own.
+  This covers the database only: the team emails stay in the mailbox, and
+  recordings and transcripts follow the retention set in ElevenLabs.
 - **Guardrails in ElevenLabs.** On top of the rules in the prompt, the
   manipulation guardrail ends a call on prompt injection attempts, and content
   guardrails block sexual, harassing, obscene or violent answers. They run in
@@ -226,23 +261,27 @@ sudo docker compose exec postgres psql -U n8n -d n8n
 Then run the statements from `sql/001_hotel_database.sql` and after that
 `sql/002_least_privilege.sql` step by step. `sql/003_rooms_and_requests.sql`
 to `sql/006_availability_function.sql` add rooms, occupancy, booking requests
-and the availability function for stage 2. The password for `hotel_app` is
+and the availability function for stage 2, `sql/007_calls.sql` to
+`sql/009_retention.sql` the call table, the outcome view and the retention
+function for stage 4. The password for `hotel_app` is
 set interactively with `\password`.
 
 ### 3. n8n
 
 Open the editor through the tunnel
 (`ssh -N -L 15678:127.0.0.1:5678 <server>`, then `http://localhost:15678`),
-create the owner account and three credentials:
+create the owner account and four credentials:
 
 - **Postgres:** host `postgres`, database `hotel`, user `hotel_app`, SSL disabled
 - **Header Auth:** name `X-Elmblick-Key`, value from `openssl rand -hex 32`
 - **SMTP:** for Gmail host `smtp.gmail.com`, port `465`, SSL on, and an app
   password instead of the account password
+- **Crypto:** the secret of the ElevenLabs post-call webhook as Hmac Secret
 
-Import the three workflows from `n8n/`, assign the credentials, set the
+Import the five workflows from `n8n/`, assign the credentials, set the
 sender and the team address in the two Send Email nodes (`nina@example.com`,
-`team@example.com` in the exports) and publish them.
+`team@example.com` in the exports) and publish them. In the settings of the
+call workflow, do not save successful production executions.
 
 ### 4. ElevenLabs
 
@@ -270,6 +309,11 @@ as the AI assistant of the reception and mentions that the call is recorded.
 Limits used in this project: maximum call duration 480 seconds, end the call
 after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
 billing settings.
+
+For the evaluation, add a post-call webhook in the workspace-wide Agents
+settings of ElevenLabs (it applies to every agent in the workspace): URL `https://n8n.example.com/webhook/anruf-ende`, HMAC
+authentication, only the transcript event, audio off and "exclude transcript"
+on. Store the secret shown on creation in the Crypto credential.
 
 ### 5. Phone number
 
@@ -299,6 +343,8 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 # {"ok":false,"gespeichert":false,"fehlt":["name","telefon"]}
 
 # without key: 403
+# tampered post-call webhook or one older than 30 minutes: 401
+# the same call sent twice is stored once
 
 # availability for two adults
 curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
@@ -331,8 +377,54 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
   that the tool failed. A date in the past or a missing phone number is
   something she can fix with the caller, so the workflows answer `200` with
   `ok: false` and the reason. Real outages still surface as errors.
+- **The outcome of a call is derived, not stored.** Nina saves a request
+  during the call, ElevenLabs sends the call only after it has ended. A
+  foreign key from requests to calls would therefore reject every request.
+  The view `anruf_ergebnisse` links them through the conversation ID instead,
+  so nothing has to be labelled by hand or by the LLM.
+- **Requests are deleted by age, not by status.** In a demo nobody works
+  through the requests, so an open request goes after 30 days like any other.
+  A real hotel would keep open requests until the stay is over.
 - **Fictional hotel, real place.** The hotel and all prices are invented; the
   directions and surroundings of Schöningen are real.
+
+---
+
+## Evaluation
+
+Every call ends up as one row in `anrufe`. The view `anruf_ergebnisse` adds
+what the call led to, checked in this order: a booking request, a callback
+request, or information only. `EXISTS` instead of a join keeps it at one row
+per call, even if a caller leaves two requests. The queries run as the
+superuser (`psql -U n8n -d hotel`); `hotel_app` has no access to the view.
+
+Calls per channel (`sip_trunk` is the phone, `react_sdk` the browser test):
+
+```sql
+SELECT kanal,
+       count(*)                  AS anrufe,
+       round(avg(dauer_sek))     AS mittlere_dauer_sek,
+       sum(kosten_credits)       AS credits,
+       round(sum(kosten_usd), 2) AS usd
+FROM anrufe
+GROUP BY kanal;
+```
+
+Share of phone calls that did not end in a callback request (a call with a
+booking request and a callback request counts as a booking request):
+
+```sql
+SELECT count(*) AS anrufe,
+       count(*) FILTER (WHERE ergebnis <> 'rueckruf') AS ohne_rueckruf,
+       round(100.0 * count(*) FILTER (WHERE ergebnis <> 'rueckruf')
+             / NULLIF(count(*), 0), 1) AS anteil_prozent
+FROM anruf_ergebnisse
+WHERE kanal = 'sip_trunk';
+```
+
+The first real calls also show what a call costs: 88 seconds by phone came to
+678 credits, about 13 US cents, of which only 86 credits were the LLM. Voice
+and telephony are the larger part.
 
 ---
 
@@ -385,5 +477,5 @@ misread.
    the date range
 3. **Service during the stay:** wake-up calls, late check-out or a table in
    the restaurant as tasks for the team, based on the room number
-4. **Evaluation:** store every call via post-call webhook and analyse it with
-   SQL, for example the share of calls solved without a callback
+4. **Evaluation** (done): store every call via a signed post-call webhook,
+   derive the outcome with SQL and delete requests after 30 days

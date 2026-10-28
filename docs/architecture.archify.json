@@ -6,7 +6,7 @@
     "subtitle": "Nina, the AI receptionist of the fictional Hotel Elmblick",
     "quality_profile": "showcase",
     "viewBox": [
-      980,
+      1000,
       830
     ],
     "views": [
@@ -33,18 +33,31 @@
           "pg",
           "gmail"
         ],
-        "note": "Nina decides on her own which tool to call. Nginx passes only /webhook/, n8n validates, asks PostgreSQL and emails the team."
+        "note": "Nina decides on her own which tool to call. Nginx passes only /webhook/, n8n validates, asks PostgreSQL and emails new requests."
+      },
+      {
+        "id": "after",
+        "label": "After the call",
+        "focus": [
+          "agent",
+          "postcall",
+          "nginx",
+          "n8n",
+          "pg"
+        ],
+        "note": "After every call ElevenLabs sends a signed webhook. n8n checks the signature and stores ten fields, no number, no transcript."
       },
       {
         "id": "public",
         "label": "What is public",
         "focus": [
           "tool",
+          "postcall",
           "nginx",
           "n8n",
           "admin"
         ],
-        "note": "From the internet only /webhook/ with the key gets through. The n8n editor is reached through an SSH tunnel only."
+        "note": "Only /webhook/ reaches n8n, which answers 403 without the key and 401 without a valid signature. The editor needs an SSH tunnel."
       }
     ],
     "output": "architecture.html"
@@ -109,14 +122,14 @@
     {
       "id": "kb",
       "type": "database",
-      "label": "Knowledge base",
-      "sublabel": "system prompt, house facts",
+      "label": "Prompt + knowledge",
+      "sublabel": "rules, prices, house facts",
       "pos": [
         760,
         80
       ],
       "size": [
-        180,
+        190,
         72
       ]
     },
@@ -166,13 +179,13 @@
       "id": "pg",
       "type": "database",
       "label": "PostgreSQL 16",
-      "sublabel": "rooms, stays, requests",
+      "sublabel": "rooms, stays, requests, calls",
       "pos": [
         760,
         570
       ],
       "size": [
-        180,
+        190,
         72
       ]
     },
@@ -203,6 +216,20 @@
         190,
         72
       ]
+    },
+    {
+      "id": "postcall",
+      "type": "backend",
+      "label": "Post-call webhook",
+      "sublabel": "after every call",
+      "pos": [
+        760,
+        230
+      ],
+      "size": [
+        190,
+        72
+      ]
     }
   ],
   "boundaries": [
@@ -212,7 +239,8 @@
       "wraps": [
         "agent",
         "kb",
-        "tool"
+        "tool",
+        "postcall"
       ],
       "pad": 20
     },
@@ -298,6 +326,23 @@
       "label": "new request",
       "fromSide": "bottom",
       "toSide": "top"
+    },
+    {
+      "id": "agent-postcall",
+      "from": "agent",
+      "to": "postcall",
+      "label": "call ended",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "postcall-nginx",
+      "from": "postcall",
+      "to": "nginx",
+      "label": "HTTPS + HMAC",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "right"
     }
   ],
   "cards": [
@@ -306,10 +351,12 @@
       "title": "What the picture does not show",
       "items": [
         "invalid input comes back as ok false with the reason",
-        "every row keeps the ElevenLabs conversation ID",
+        "every request and every call keeps the ElevenLabs conversation ID",
         "every other path answers 404, the editor too",
         "PostgreSQL itself refuses double bookings",
-        "the team email goes out after Nina has her answer"
+        "the team email goes out after Nina has her answer",
+        "a tampered or outdated call webhook gets 401",
+        "a nightly job deletes requests after 30 days, calls after 90"
       ]
     },
     {
@@ -328,8 +375,8 @@
       "items": [
         "live on a German local number via Telnyx",
         "checks free rooms and prices from PostgreSQL",
-        "records booking requests for the team to confirm",
-        "takes callback requests"
+        "records booking and callback requests for the team",
+        "stores every call for evaluation with SQL"
       ]
     }
   ]

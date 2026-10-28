@@ -49,35 +49,51 @@ Hostinger VPS.
 ## How it works
 
 The architecture above shows where each part runs. The sequence below follows
-a single callback request from the first question to the stored row.
+a single booking request through both tools, from the first question to the
+stored call. Nginx sits in front of n8n and only passes `/webhook/` on. The key
+and the fields are checked in n8n. Callback requests take the same path with
+the tool `rueckruf_aufnehmen` and the table `rueckrufe`.
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant C as Caller
-    participant N as Nina (ElevenLabs Agent)
-    participant G as Nginx
-    participant W as n8n workflow
+    participant N as Nina (ElevenLabs)
+    participant W as n8n
     participant D as PostgreSQL
+    participant T as Team (Gmail)
 
-    C->>N: Asks whether lunch is served at a conference
-    N->>C: Not in the knowledge base, offers a callback
-    C->>N: Name, phone number, request
-    N->>C: Repeats the number digit by digit, caller confirms
-    N->>G: POST /webhook/rueckruf (header X-Elmblick-Key)
-    G->>W: forwards only /webhook/*
-    W->>W: checks name, telefon, anliegen
-    W->>D: INSERT INTO rueckrufe
-    D-->>W: new row with id
-    W-->>N: ok true, gespeichert true, id 7
-    N->>C: Confirms that the callback request is recorded
+    C->>N: Room for two adults, 13 to 15 November?
+    N->>C: Confirms the dates, short holding phrase
+    N->>W: Tool verfuegbarkeit_pruefen
+    Note over W,D: checks key and input
+    W->>D: verfuegbarkeit(...) as JSON
+    D-->>W: double rooms 0 free, suite 1 free
+    W-->>N: categories, free rooms, prices
+    N->>C: Double rooms are full, offers the suite for 358 €
+    C->>N: Takes the suite, gives name and phone number
+    N->>C: Repeats number and summary, caller confirms
+    N->>W: Tool buchungsanfrage_aufnehmen
+    Note over W,D: checks key and fields
+    W->>D: INSERT INTO buchungsanfragen
+    W-->>N: ok true, id
+    W->>T: Email
+    N->>C: Request recorded, the team will confirm it
+    C->>N: Hangs up
+    N->>W: Post-call webhook, HMAC signed
+    Note over W,D: checks signature and age
+    W->>D: INSERT INTO anrufe
 ```
 
 Every stored request carries the ElevenLabs conversation ID (`anruf_id`), so
 each row in the database can be traced back to the call transcript.
 
 Field and table names are German because the hotel team works with the data:
-`rueckrufe` = callbacks, `telefon` = phone, `anliegen` = request,
-`erreichbar` = when to reach the caller, `gespeichert` = saved, `fehlt` = missing,
+`verfuegbarkeit_pruefen` = check availability, `buchungsanfrage_aufnehmen` =
+record a booking request, `buchungsanfragen` = booking requests,
+`rueckrufe` = callbacks, `anrufe` = calls, `telefon` = phone,
+`anliegen` = request, `erreichbar` = when to reach the caller,
+`gespeichert` = saved, `fehlt` = missing,
 `offen` / `erledigt` / `nicht_erreicht` = open / done / not reached.
 
 ---

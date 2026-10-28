@@ -1,0 +1,73 @@
+{
+  "name": "Elmblick Aufräumen",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 3,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fafd20c5-60e7-48cb-9e3c-f503cacffd6e",
+      "name": "Every night at 03:15"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM alte_daten_loeschen();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c5cf0a9b-95bd-48aa-8441-d95545ba72ac",
+      "name": "Delete old data",
+      "credentials": {
+        "postgres": {
+          "id": "xU9433QDCD4sNqAz",
+          "name": "Hotel DB"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every night at 03:15": {
+      "main": [
+        [
+          {
+            "node": "Delete old data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d09b4a0b-1525-438a-8ff0-95668d41ef31",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "59f3c4008b79a858151e5dac3e4b32b78b30b28bca0d97b0dc3b870b27f1a32e"
+  },
+  "nodeGroups": [],
+  "id": "vMEix0gDXOMLhzbK",
+  "tags": []
+}

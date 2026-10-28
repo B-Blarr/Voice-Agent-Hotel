@@ -1,5 +1,7 @@
 # Voice Agent Hotel
 
+[![CI](https://github.com/B-Blarr/Voice-Agent-Hotel/actions/workflows/ci.yml/badge.svg)](https://github.com/B-Blarr/Voice-Agent-Hotel/actions/workflows/ci.yml)
+
 **Nina** is the AI receptionist of *Hotel Elmblick*, a fictional family-run
 hotel in Schöningen, Lower Saxony. She picks up the phone in German, answers
 questions about rooms, prices, breakfast, arrival and house rules, checks
@@ -39,6 +41,7 @@ Hostinger VPS.
 - [Security](#security)
 - [Setup](#setup)
 - [Testing the webhook](#testing-the-webhook)
+- [Automated tests](#automated-tests)
 - [Design decisions](#design-decisions)
 - [Evaluation](#evaluation)
 - [Model choice](#model-choice)
@@ -146,6 +149,7 @@ record a booking request, `buchungsanfragen` = booking requests,
 | Ubuntu 24.04 VPS | Hostinger, shared with other projects                     |
 | Telnyx           | German local phone number via SIP trunk                   |
 | Gmail (SMTP)     | Notification emails to the team                           |
+| GitHub Actions   | Applies every migration to a fresh PostgreSQL 16, runs SQL tests |
 
 ---
 
@@ -153,6 +157,8 @@ record a booking request, `buchungsanfragen` = booking requests,
 
 ```
 Voice-Agent-Hotel/
+├── .github/workflows/
+│   └── ci.yml                      # CI: all migrations and SQL tests on PostgreSQL 16
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
@@ -173,16 +179,22 @@ Voice-Agent-Hotel/
 │   ├── compose.yaml                # n8n + PostgreSQL
 │   ├── nginx-n8n.conf              # Only /webhook/ is public
 │   └── .env.example                # Required secrets, without values
-└── sql/
-    ├── 001_hotel_database.sql      # Database, role and table for callback requests
-    ├── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
-    ├── 003_rooms_and_requests.sql  # Stage 2: room categories, rooms, occupancy, booking requests
-    ├── 004_demo_data.sql           # Invented occupancy for testing availability
-    ├── 005_babies.sql              # Babies take no bed, at most one cot per room
-    ├── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
-    ├── 007_calls.sql               # Stage 4: one row per call from the post-call webhook
-    ├── 008_call_results.sql        # View anruf_ergebnisse: what each call led to
-    └── 009_retention.sql           # alte_daten_loeschen(): requests after 30 days, calls after 90
+├── sql/
+│   ├── 001_hotel_database.sql      # Database, role and table for callback requests
+│   ├── 002_least_privilege.sql     # Separate owner, hotel_app may only INSERT and SELECT
+│   ├── 003_rooms_and_requests.sql  # Stage 2: room categories, rooms, occupancy, booking requests
+│   ├── 004_demo_data.sql           # Invented occupancy for testing availability
+│   ├── 005_babies.sql              # Babies take no bed, at most one cot per room
+│   ├── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
+│   ├── 007_calls.sql               # Stage 4: one row per call from the post-call webhook
+│   ├── 008_call_results.sql        # View anruf_ergebnisse: what each call led to
+│   └── 009_retention.sql           # alte_daten_loeschen(): requests after 30 days, calls after 90
+└── tests/
+    ├── 01_availability.sql         # verfuegbarkeit() against the demo stays
+    ├── 02_double_booking.sql       # Overlapping stays are refused
+    ├── 03_privileges.sql           # What hotel_app may and may not do
+    ├── 04_call_results.sql         # Outcome per call in anruf_ergebnisse
+    └── 05_retention.sql            # alte_daten_loeschen() keeps everything younger
 ```
 
 ---
@@ -369,6 +381,29 @@ curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
 # {"ok":true,"kategorien":[{"kategorie":"doppelzimmer","freie_zimmer":0,...},
 #  {"kategorie":"suite","freie_zimmer":1,"naechte":2,"gesamtpreis":358,...}]}
 ```
+
+---
+
+## Automated tests
+
+Every push to `main` and every pull request runs
+[`ci.yml`](.github/workflows/ci.yml) on GitHub Actions. It starts an empty
+PostgreSQL 16, applies all migrations from `sql/` in order like on the server
+and then runs the tests in `tests/`. 001 sets the password of `hotel_app`
+interactively, so CI swaps that one line for a throwaway password. Each test
+file runs inside a transaction that is rolled back at the end, and a failing
+`ASSERT` stops the job with a message that says what went wrong.
+
+| Test | What it checks |
+| --- | --- |
+| `01_availability.sql` | Free rooms and prices from `verfuegbarkeit()` against the demo stays, including the departure day, children, needs and guests that fit no room |
+| `02_double_booking.sql` | Overlapping stays in one room are refused, arriving on the departure day of the previous guest is allowed |
+| `03_privileges.sql` | `hotel_app` may only read and insert, owns nothing, and the functions are not open to every role |
+| `04_call_results.sql` | `anruf_ergebnisse` derives booking request, callback or information for each call |
+| `05_retention.sql` | `alte_daten_loeschen()`, called as `hotel_app`, deletes only rows older than 30 or 90 days |
+
+The agent itself is tested in ElevenLabs (see [Model choice](#model-choice)),
+the workflows with curl as shown above.
 
 ---
 

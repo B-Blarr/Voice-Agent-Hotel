@@ -89,7 +89,8 @@ sequenceDiagram
 ```
 
 Every stored request carries the ElevenLabs conversation ID (`anruf_id`), so
-each row in the database can be traced back to the call transcript.
+each row in the database can be traced back to the call transcript for as
+long as ElevenLabs keeps it (30 days).
 
 Field and table names are German because the hotel team works with the data:
 `verfuegbarkeit_pruefen` = check availability, `buchungsanfrage_aufnehmen` =
@@ -123,6 +124,7 @@ record a booking request, `buchungsanfragen` = booking requests,
   from the data itself, see [Evaluation](#evaluation)
 - Booking and callback requests are deleted from the database after 30 days,
   calls after 90 days
+- No call audio is stored, transcripts in ElevenLabs are deleted after 30 days
 - Server-side validation: incomplete or impossible requests are answered with
   `ok: false` and the reason, so Nina can ask for exactly what is missing
 - Callback requests stored in PostgreSQL with status `offen`, `erledigt` or
@@ -235,8 +237,11 @@ Voice-Agent-Hotel/
   after 30 days and calls after 90 days. It runs every night as `hotel_app`
   but with the rights of its owner (`SECURITY DEFINER` with a fixed
   `search_path`), so `hotel_app` still cannot delete a single row on its own.
-  This covers the database only: the team emails stay in the mailbox, and
-  recordings and transcripts follow the retention set in ElevenLabs.
+  In ElevenLabs, audio saving is off, so no recordings are stored at all, and
+  transcripts are deleted after 30 days like the requests. A recording of a
+  voice is more sensitive than text, and the transcript already holds
+  everything the team needs.
+  The team emails stay in the mailbox and are not covered by any of this.
 - **Guardrails in ElevenLabs.** On top of the rules in the prompt, the
   manipulation guardrail ends a call on prompt injection attempts, and content
   guardrails block sexual, harassing, obscene or violent answers. They run in
@@ -337,6 +342,9 @@ as the AI assistant of the reception and mentions that the call is recorded.
 Limits used in this project: maximum call duration 480 seconds, end the call
 after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
 billing settings.
+
+Privacy settings in the agent's Advanced tab: audio saving off and data
+retention 30 days.
 
 For the evaluation, add a post-call webhook in the workspace-wide Agents
 settings of ElevenLabs (it applies to every agent in the workspace): URL `https://n8n.example.com/webhook/anruf-ende`, HMAC

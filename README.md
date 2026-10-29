@@ -158,7 +158,7 @@ record a booking request, `buchungsanfragen` = booking requests,
 ```
 Voice-Agent-Hotel/
 ├── .github/workflows/
-│   └── ci.yml                      # CI: all migrations and SQL tests on PostgreSQL 16
+│   └── ci.yml                      # CI: migrations and SQL tests, JSON check, gitleaks
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
@@ -401,6 +401,13 @@ file runs inside a transaction that is rolled back at the end, and a failing
 | `03_privileges.sql` | `hotel_app` may only read and insert, owns nothing, and the functions are not open to every role |
 | `04_call_results.sql` | `anruf_ergebnisse` derives booking request, callback or information for each call |
 | `05_retention.sql` | `alte_daten_loeschen()`, called as `hotel_app`, deletes only rows older than 30 or 90 days |
+
+A second job, `Hygiene`, checks that every JSON file in the repository parses
+and scans the whole git history for secrets with
+[gitleaks](https://github.com/gitleaks/gitleaks), in a fixed version checked
+against its SHA-256. The one known false positive, the empty
+`POSTGRES_PASSWORD=` in `server/.env.example`, is listed by fingerprint in
+`.gitleaksignore`. Both jobs are required checks for `main`.
 
 The agent itself is tested in ElevenLabs (see [Model choice](#model-choice)),
 the workflows with curl as shown above.

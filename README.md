@@ -12,8 +12,9 @@ The conversation runs on **ElevenLabs Agents**, calls come in through a
 **Telnyx** SIP trunk. When Nina needs data, she uses webhook tools that call my
 own server, where **n8n** workflows validate the request and query or write to
 **PostgreSQL**. After every call, ElevenLabs sends a signed post-call webhook,
-and n8n stores duration, cost and channel, so the calls can be evaluated with
-SQL. Everything on the server runs in **Docker** behind **Nginx** on a
+and n8n stores duration, cost, channel and how ElevenLabs rated the call, so
+the calls can be evaluated with SQL and a weekly report shows the ones that did
+not go well. Everything on the server runs in **Docker** behind **Nginx** on a
 Hostinger VPS.
 
 > **Status:** Nina is live under a German local number (05352, Schöningen). She
@@ -122,6 +123,8 @@ record a booking request, `buchungsanfragen` = booking requests,
   channel and how it ended, without the caller's number or the transcript
 - What a call led to (booking request, callback or information only) follows
   from the data itself, see [Evaluation](#evaluation)
+- Every call is rated after it ends against three evaluation criteria, and a
+  weekly report emails the team every call that did not pass
 - Booking and callback requests are deleted from the database after 30 days,
   calls after 90 days
 - No call audio is stored, transcripts in ElevenLabs are deleted after 30 days
@@ -164,6 +167,7 @@ Voice-Agent-Hotel/
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
+│   ├── evaluation_criteria.md      # How every call is rated after it ends (German)
 │   ├── tool_buchungsanfrage_aufnehmen.json # Webhook tool: booking request
 │   ├── tool_rueckruf_aufnehmen.json  # Webhook tool: callback request
 │   └── tool_verfuegbarkeit_pruefen.json # Webhook tool: free rooms and prices
@@ -176,7 +180,8 @@ Voice-Agent-Hotel/
 │   ├── elmblick_aufraeumen.json    # Workflow export: every night at 03:15 → alte_daten_loeschen()
 │   ├── elmblick_buchungsanfrage.json # Workflow export: Webhook → Code check → If → Insert → Respond → Email
 │   ├── elmblick_rueckrufbitte.json # Workflow export: Webhook → If → Postgres → Respond → Email
-│   └── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
+│   ├── elmblick_verfuegbarkeit.json # Workflow export: Webhook → Code check → If → verfuegbarkeit() → Respond
+│   └── elmblick_wochenbericht.json # Workflow export: every Monday at 07:40 → last 7 days → Email
 ├── server/
 │   ├── compose.yaml                # n8n + PostgreSQL
 │   ├── nginx-n8n.conf              # Only /webhook/ is public
@@ -311,8 +316,8 @@ create the owner account and four credentials:
   password instead of the account password
 - **Crypto:** the secret of the ElevenLabs post-call webhook as Hmac Secret
 
-Import the five workflows from `n8n/`, assign the credentials, set the
-sender and the team address in the two Send Email nodes (`nina@example.com`,
+Import the six workflows from `n8n/`, assign the credentials, set the
+sender and the team address in the three Send Email nodes (`nina@example.com`,
 `team@example.com` in the exports) and publish them. In the settings of the
 call workflow, do not save successful production executions.
 
@@ -344,7 +349,8 @@ after 30 seconds of silence, and a monthly spending cap in the ElevenLabs
 billing settings.
 
 Privacy settings in the agent's Advanced tab: audio saving off and data
-retention 30 days.
+retention 30 days. In the Analysis tab, add the three criteria from
+`agent/evaluation_criteria.md`.
 
 For the evaluation, add a post-call webhook in the workspace-wide Agents
 settings of ElevenLabs (it applies to every agent in the workspace): URL `https://n8n.example.com/webhook/anruf-ende`, HMAC
@@ -492,6 +498,23 @@ The first real calls also show what a call costs: 88 seconds by phone came to
 678 credits, about 13 US cents, of which only 86 credits were the LLM. Voice
 and telephony are the larger part.
 
+### Quality in production
+
+The agent tests check Nina before a change goes live. After that, ElevenLabs
+rates every real call once it ends against three evaluation criteria
+([`agent/evaluation_criteria.md`](agent/evaluation_criteria.md)): the
+caller's request was answered or handed to the team, free rooms and prices
+came from a tool result, and the phone number and booking details were
+confirmed before anything was saved. The overall rating arrives with the
+post-call webhook and is stored in `erfolgreich`.
+
+Every Monday at 07:40 the workflow `Elmblick Wochenbericht` emails the team
+the numbers of the last seven days and every call that was not rated
+`success`, with its title and conversation ID. One query as `hotel_app`
+builds the whole report, including the list as text, so the email node only
+fills in the values. A call that went wrong is read in the transcript, the
+prompt or the knowledge base is fixed, and the case becomes a new agent test.
+
 ---
 
 ## Model choice
@@ -544,4 +567,6 @@ misread.
 3. **Service during the stay:** wake-up calls, late check-out or a table in
    the restaurant as tasks for the team, based on the room number
 4. **Evaluation** (done): store every call via a signed post-call webhook,
-   derive the outcome with SQL and delete requests after 30 days
+   derive the outcome with SQL and delete requests after 30 days. Every call
+   is rated against three evaluation criteria, and a weekly report lists the
+   calls that did not pass

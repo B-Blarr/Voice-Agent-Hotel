@@ -1,0 +1,107 @@
+{
+  "name": "Elmblick Wochenbericht",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7,
+              "triggerAtMinute": 40
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a1c94060-d33f-4539-8b26-f490886dd015",
+      "name": "Every Monday at 07:40"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH woche AS (\n    SELECT * FROM anrufe\n    WHERE beginn >= now() - interval '7 days'\n)\nSELECT\n    to_char(now() - interval '7 days', 'DD.MM.') AS von,\n    to_char(now(), 'DD.MM.YYYY') AS bis,\n    count(*) AS anrufe,\n    count(*) FILTER (WHERE kanal = 'sip_trunk') AS telefon,\n    count(*) FILTER (WHERE erfolgreich = 'success') AS erfolgreich,\n    count(*) FILTER (WHERE erfolgreich IS DISTINCT FROM 'success') AS auffaellig,\n    coalesce(round(avg(dauer_sek)), 0) AS dauer_schnitt_sek,\n    coalesce(round(sum(kosten_usd), 2), 0) AS kosten_usd,\n    coalesce(\n        string_agg(\n            to_char(beginn AT TIME ZONE 'Europe/Berlin', 'DD.MM. HH24:MI')\n            || '  ' || coalesce(erfolgreich, 'unknown')\n            || '  ' || coalesce(titel, 'ohne Titel')\n            || ' (' || dauer_sek || ' s, ' || kanal || ')'\n            || E'\\n    ' || anruf_id,\n            E'\\n\\n' ORDER BY beginn\n        ) FILTER (WHERE erfolgreich IS DISTINCT FROM 'success'),\n        'Keine.'\n    ) AS liste\nFROM woche;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "76468a9d-fd16-4fe7-b96a-c9f2dd7c0ba2",
+      "name": "Load last week",
+      "credentials": {
+        "postgres": {
+          "id": "xU9433QDCD4sNqAz",
+          "name": "Hotel DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "Nina, Hotel Elmblick <nina@example.com>",
+        "toEmail": "team@example.com",
+        "subject": "=Nina Wochenbericht: {{ $json.anrufe }} {{ $json.anrufe == 1 ? 'Anruf' : 'Anrufe' }}, {{ $json.auffaellig }} auffällig",
+        "emailFormat": "text",
+        "text": "=Wochenbericht von Nina, {{ $json.von }} bis {{ $json.bis }}\n\nAnrufe: {{ $json.anrufe }}, davon über das Telefon: {{ $json.telefon }}\nErfolgreich laut Bewertung: {{ $json.erfolgreich }}\nAuffällig (failure oder unknown): {{ $json.auffaellig }}\nDurchschnittliche Dauer: {{ $json.dauer_schnitt_sek }} Sekunden\nKosten: {{ $json.kosten_usd }} USD\n\nAuffällige Anrufe:\n\n{{ $json.liste }}\n\nDie Transkripte stehen 30 Tage lang im Verlauf von ElevenLabs, die Gesprächs-ID findet sie. Dort steht auch, welches Bewertungskriterium nicht erfüllt war. Was sich wiederholt, wird ein neuer Agent-Test.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "80c9f9df-5d0e-4876-a076-66afa8d82941",
+      "name": "Send report",
+      "webhookId": "d5416a55-190a-4a3e-81da-4b3946ec094f",
+      "credentials": {
+        "smtp": {
+          "id": "g14pWQza1ZgCY6l9",
+          "name": "Gmail Elmblick"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Monday at 07:40": {
+      "main": [
+        [
+          {
+            "node": "Load last week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load last week": {
+      "main": [
+        [
+          {
+            "node": "Send report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -9,8 +9,8 @@ INSERT INTO anrufe (anruf_id, beginn, dauer_sek, kanal) VALUES
     ('conv_ci_auskunft', now(),  40, 'react_sdk');
 
 INSERT INTO buchungsanfragen (kategorie, anreise, abreise, erwachsene, name, telefon, quelle, anruf_id) VALUES
-    ('doppelzimmer', '2026-11-20', '2026-11-22', 2, 'Test Gast', '0000', 'telefon', 'conv_ci_buchung'),
-    ('suite',        '2026-11-20', '2026-11-22', 2, 'Test Gast', '0000', 'telefon', 'conv_ci_beides');
+    ('doppelzimmer', '2027-11-20', '2027-11-22', 2, 'Test Gast', '0000', 'telefon', 'conv_ci_buchung'),
+    ('suite',        '2027-11-20', '2027-11-22', 2, 'Test Gast', '0000', 'telefon', 'conv_ci_beides');
 
 INSERT INTO rueckrufe (name, telefon, anliegen, anruf_id) VALUES
     ('Test Gast', '0000', 'Frage zur Anreise', 'conv_ci_rueckruf'),

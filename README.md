@@ -391,7 +391,7 @@ curl -s -X POST https://n8n.example.com/webhook/rueckruf \
 # availability for two adults
 curl -s -X POST https://n8n.example.com/webhook/verfuegbarkeit \
   -H "Content-Type: application/json" -H "X-Elmblick-Key: $KEY" \
-  -d '{"anreise":"2026-11-13","abreise":"2026-11-15","erwachsene":2}'
+  -d '{"anreise":"2027-11-13","abreise":"2027-11-15","erwachsene":2}'
 # {"ok":true,"kategorien":[{"kategorie":"doppelzimmer","freie_zimmer":0,...},
 #  {"kategorie":"suite","freie_zimmer":1,"naechte":2,"gesamtpreis":358,...}]}
 ```

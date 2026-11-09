@@ -4,8 +4,8 @@
 BEGIN;
 
 INSERT INTO buchungsanfragen (erstellt_am, kategorie, anreise, abreise, erwachsene, name, telefon, quelle) VALUES
-    (now() - interval '31 days', 'doppelzimmer', '2026-11-20', '2026-11-22', 2, 'Alt',  '0000', 'telefon'),
-    (now() - interval '29 days', 'doppelzimmer', '2026-11-20', '2026-11-22', 2, 'Neu',  '0000', 'telefon');
+    (now() - interval '31 days', 'doppelzimmer', '2027-11-20', '2027-11-22', 2, 'Alt',  '0000', 'telefon'),
+    (now() - interval '29 days', 'doppelzimmer', '2027-11-20', '2027-11-22', 2, 'Neu',  '0000', 'telefon');
 
 INSERT INTO rueckrufe (erstellt_am, name, telefon, anliegen) VALUES
     (now() - interval '31 days', 'Alt', '0000', 'alt'),

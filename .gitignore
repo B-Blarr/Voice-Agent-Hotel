@@ -6,3 +6,9 @@ _privat/
 
 # Personal helper for the local SSH tunnel
 n8n_vps_oeffnen.cmd
+
+# Python (api/)
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3

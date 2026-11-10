@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Every migration in order, like on the server. 001 and 010 set passwords
+      # Every migration in order, like on the server. 001, 010 and 011 set passwords
       # with \password, which needs a keyboard, so CI sets throwaway ones.
       - name: Apply migrations
         run: |
@@ -49,7 +49,7 @@ jobs:
               sql/001_*|sql/002_*) db=n8n ;;
               *) db=hotel ;;
             esac
-            sed "s/^\\\\password \\(hotel_[a-z_]*\\)$/ALTER ROLE \\1 PASSWORD 'ci';/" "$f" \
+            sed "s/^\\\\password \\([a-z_]*\\)$/ALTER ROLE \\1 PASSWORD 'ci';/" "$f" \
               | psql -v ON_ERROR_STOP=1 -d "$db" -f -
             echo "::endgroup::"
           done

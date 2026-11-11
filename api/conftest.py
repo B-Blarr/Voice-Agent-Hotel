@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db import connections
 from rest_framework.test import APIClient
 
@@ -11,6 +12,12 @@ def django_db_setup():
     team is migrated by Django, hotel is built from sql/. Tests only ever run
     inside transactions that are rolled back.
     """
+
+
+@pytest.fixture(autouse=True)
+def fresh_login_limit():
+    """The login limit counts in the cache, so every test starts with a clean count."""
+    cache.clear()
 
 
 @pytest.fixture

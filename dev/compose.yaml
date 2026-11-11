@@ -1,0 +1,25 @@
+# Local PostgreSQL for developing the API, built like the CI database.
+# Start:  docker compose -f dev/compose.yaml up -d   (from the repository root)
+# Reset:  docker compose -f dev/compose.yaml down -v (deletes the local data)
+# Only for this computer: the password "lokal" is no secret, the port is bound to localhost.
+# Port 15432 on the computer, because Windows may reserve 5432 (seen on the GEEKOM).
+
+name: voice-agent-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: lokal
+      POSTGRES_DB: n8n
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - dev_data:/var/lib/postgresql/data
+      # On the first start every migration from sql/ runs once, like in the CI.
+      - ../sql:/sql:ro
+      - ./init-hotel.sh:/docker-entrypoint-initdb.d/init-hotel.sh:ro
+
+volumes:
+  dev_data:

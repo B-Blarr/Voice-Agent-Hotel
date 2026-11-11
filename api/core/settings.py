@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "auth_app",
     "team_app",
 ]
 
@@ -131,7 +132,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # At most ten login attempts per minute and address.
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/minute",
+    },
+    # Behind Nginx the visitor's address comes from X-Forwarded-For, so set 1 there.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES", "0")),
 }
+
+# Cookies only over HTTPS, except while developing locally.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+# A team shift, not two weeks like the default.
+SESSION_COOKIE_AGE = 60 * 60 * 12
+# The address of the team area in production, e.g. https://elmblick.benjaminblarr.de
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 
 # Password validation

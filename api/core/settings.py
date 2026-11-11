@@ -122,6 +122,17 @@ DATABASES = {
 
 DATABASE_ROUTERS = ["core.routers.HotelRouter"]
 
+REST_FRAMEWORK = {
+    # Logged in through a Django session cookie, protected against CSRF.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Nothing in the team area is public.
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

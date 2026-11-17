@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from team_app.models import Anruf, Buchungsanfrage, Rueckruf
+from team_app.models import BookingRequest, Call, Callback
 
 
 class StatusOnlySerializer(serializers.ModelSerializer):
@@ -13,23 +13,22 @@ class StatusOnlySerializer(serializers.ModelSerializer):
         return attrs
 
 
-class BuchungsanfrageSerializer(StatusOnlySerializer):
+class BookingRequestSerializer(StatusOnlySerializer):
     class Meta:
-        model = Buchungsanfrage
+        model = BookingRequest
         fields = "__all__"
-        # The team may only change the status, everything else comes from Nina or the website.
-        read_only_fields = [f.name for f in Buchungsanfrage._meta.fields if f.name != "status"]
+        read_only_fields = [f.name for f in BookingRequest._meta.fields if f.name != "status"]
 
 
-class RueckrufSerializer(StatusOnlySerializer):
+class CallbackSerializer(StatusOnlySerializer):
     class Meta:
-        model = Rueckruf
+        model = Callback
         fields = "__all__"
-        read_only_fields = [f.name for f in Rueckruf._meta.fields if f.name != "status"]
+        read_only_fields = [f.name for f in Callback._meta.fields if f.name != "status"]
 
 
-class AnrufSerializer(serializers.ModelSerializer):
+class CallSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Anruf
+        model = Call
         fields = "__all__"
-        read_only_fields = [f.name for f in Anruf._meta.fields]
+        read_only_fields = [f.name for f in Call._meta.fields]

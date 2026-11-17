@@ -1,18 +1,20 @@
+import type { BookingRequest } from '../types';
+
 type RequestCardProps = {
-  category: string;
-  guestName: string;
-  arrival: string;
-  departure: string;
+  request: BookingRequest;
 };
 
-export function RequestCard({ category, guestName, arrival, departure }: RequestCardProps) {
+export function RequestCard({ request }: RequestCardProps) {
   return (
     <article>
-      <h2>{category}</h2>
+      <h2>{request.category}</h2>
       <p>
-        {arrival} bis {departure}
+        {request.arrival} bis {request.departure}
       </p>
-      <p>{guestName}</p>
+      <p>{request.name}</p>
+      <p>{request.adults} Erwachsene</p>
+      {request.accessible && <p>Barrierefrei</p>}
+      {request.separate_beds && <p>Getrennte Betten</p>}
     </article>
   );
 }

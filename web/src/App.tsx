@@ -1,7 +1,7 @@
-import { RequestCard } from './components/RequestCard'
+import { RequestCard } from './components/RequestCard';
 
 export function App() {
-  const today = new Date().toLocaleDateString('de-DE')
+  const today = new Date().toLocaleDateString('de-DE');
 
   return (
     <main>
@@ -21,5 +21,5 @@ export function App() {
         departure="05.12.2027"
       />
     </main>
-  )
+  );
 }

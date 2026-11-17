@@ -1,9 +1,9 @@
 type RequestCardProps = {
-  category: string
-  guestName: string
-  arrival: string
-  departure: string
-}
+  category: string;
+  guestName: string;
+  arrival: string;
+  departure: string;
+};
 
 export function RequestCard({ category, guestName, arrival, departure }: RequestCardProps) {
   return (
@@ -14,5 +14,5 @@ export function RequestCard({ category, guestName, arrival, departure }: Request
       </p>
       <p>{guestName}</p>
     </article>
-  )
+  );
 }

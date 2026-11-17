@@ -1,12 +1,12 @@
 from rest_framework import mixins, viewsets
 
-from team_app.models import Anruf, Buchungsanfrage, Rueckruf
+from team_app.models import BookingRequest, Call, Callback
 
-from .serializers import AnrufSerializer, BuchungsanfrageSerializer, RueckrufSerializer
+from .serializers import BookingRequestSerializer, CallbackSerializer, CallSerializer
 
 
 class StatusFilterMixin:
-    """?status=offen shows only the requests the team still has to handle."""
+    """?status=offen shows only what the team still has to handle."""
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -32,16 +32,16 @@ class StatusUpdateViewSet(
         serializer.instance.set_status(serializer.validated_data["status"])
 
 
-class BuchungsanfrageViewSet(StatusUpdateViewSet):
-    queryset = Buchungsanfrage.objects.all()
-    serializer_class = BuchungsanfrageSerializer
+class BookingRequestViewSet(StatusUpdateViewSet):
+    queryset = BookingRequest.objects.all()
+    serializer_class = BookingRequestSerializer
 
 
-class RueckrufViewSet(StatusUpdateViewSet):
-    queryset = Rueckruf.objects.all()
-    serializer_class = RueckrufSerializer
+class CallbackViewSet(StatusUpdateViewSet):
+    queryset = Callback.objects.all()
+    serializer_class = CallbackSerializer
 
 
-class AnrufViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Anruf.objects.all()
-    serializer_class = AnrufSerializer
+class CallViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Call.objects.all()
+    serializer_class = CallSerializer

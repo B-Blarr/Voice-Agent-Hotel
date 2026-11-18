@@ -14,3 +14,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function formatCategory(category: string): string {
   return CATEGORY_LABELS[category] ?? category;
 }
+
+export function formatGuests(adults: number, children: number, babies: number): string {
+  const parts: string[] = [];
+  parts.push(`${adults} ${adults === 1 ? 'Erwachsener' : 'Erwachsene'}`);
+  if (children > 0) {
+    parts.push(`${children} ${children === 1 ? 'Kind' : 'Kinder'}`);
+  }
+  if (babies > 0) {
+    parts.push(`${babies} ${babies === 1 ? 'Baby' : 'Babys'}`);
+  }
+  return parts.join(', ');
+}

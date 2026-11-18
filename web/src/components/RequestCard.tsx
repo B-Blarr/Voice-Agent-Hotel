@@ -1,5 +1,5 @@
 import type { BookingRequest } from '../types';
-import { formatDate } from '../utils/format';
+import { formatCategory, formatDate } from '../utils/format';
 
 type RequestCardProps = {
   request: BookingRequest;
@@ -8,7 +8,7 @@ type RequestCardProps = {
 export function RequestCard({ request }: RequestCardProps) {
   return (
     <article>
-      <h2>{request.category}</h2>
+      <h2>{formatCategory(request.category)}</h2>
       <p>
         {formatDate(request.arrival)} bis {formatDate(request.departure)}
       </p>

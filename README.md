@@ -154,7 +154,9 @@ record a booking request, `buchungsanfragen` = booking requests,
 | Ubuntu 24.04 VPS | Hostinger, shared with other projects                     |
 | Telnyx           | German local phone number via SIP trunk                   |
 | Gmail (SMTP)     | Notification emails to the team                           |
-| GitHub Actions   | Applies every migration to a fresh PostgreSQL 16, runs SQL tests |
+| GitHub Actions   | Applies every migration to a fresh PostgreSQL 16, runs SQL and API tests |
+| Django REST Framework | API for the team area (in progress)                  |
+| React + TypeScript | Team area in the browser, built with Vite (in progress) |
 
 ---
 
@@ -163,7 +165,7 @@ record a booking request, `buchungsanfragen` = booking requests,
 ```
 Voice-Agent-Hotel/
 ├── .github/workflows/
-│   └── ci.yml                      # CI: migrations and SQL tests, JSON check, gitleaks
+│   └── ci.yml                      # CI: migrations and SQL tests, API tests, JSON check, gitleaks
 ├── agent/
 │   ├── system_prompt.md            # Nina's instructions (German)
 │   ├── knowledge_base.md           # What Nina knows about the hotel (German)
@@ -171,6 +173,8 @@ Voice-Agent-Hotel/
 │   ├── tool_buchungsanfrage_aufnehmen.json # Webhook tool: booking request
 │   ├── tool_rueckruf_aufnehmen.json  # Webhook tool: callback request
 │   └── tool_verfuegbarkeit_pruefen.json # Webhook tool: free rooms and prices
+├── api/                            # Team area: Django REST API with its own database role (in progress)
+├── dev/                            # Local PostgreSQL with invented requests and calls for development
 ├── docs/
 │   ├── architecture-light.svg      # Architecture diagram (light and dark)
 │   ├── architecture-dark.svg
@@ -195,13 +199,18 @@ Voice-Agent-Hotel/
 │   ├── 006_availability_function.sql # verfuegbarkeit(): free rooms and price for a stay
 │   ├── 007_calls.sql               # Stage 4: one row per call from the post-call webhook
 │   ├── 008_call_results.sql        # View anruf_ergebnisse: what each call led to
-│   └── 009_retention.sql           # alte_daten_loeschen(): requests after 30 days, calls after 90
-└── tests/
-    ├── 01_availability.sql         # verfuegbarkeit() against the demo stays
-    ├── 02_double_booking.sql       # Overlapping stays are refused
-    ├── 03_privileges.sql           # What hotel_app may and may not do
-    ├── 04_call_results.sql         # Outcome per call in anruf_ergebnisse
-    └── 05_retention.sql            # alte_daten_loeschen() keeps everything younger
+│   ├── 009_retention.sql           # alte_daten_loeschen(): requests after 30 days, calls after 90
+│   ├── 010_team_role.sql           # Stage 5: role hotel_team, reads requests and calls, changes only the status
+│   └── 011_team_database.sql       # Stage 5: Django's own database team, each role connects only to its database
+├── tests/
+│   ├── 01_availability.sql         # verfuegbarkeit() against the demo stays
+│   ├── 02_double_booking.sql       # Overlapping stays are refused
+│   ├── 03_privileges.sql           # What hotel_app may and may not do
+│   ├── 04_call_results.sql         # Outcome per call in anruf_ergebnisse
+│   ├── 05_retention.sql            # alte_daten_loeschen() keeps everything younger
+│   ├── 06_team_role.sql            # What hotel_team may and may not do
+│   └── 07_team_database.sql        # Each role connects only to the database it needs
+└── web/                            # Team area: React app with TypeScript (in progress)
 ```
 
 ---
@@ -301,7 +310,8 @@ Then run the statements from `sql/001_hotel_database.sql` and after that
 to `sql/006_availability_function.sql` add rooms, occupancy, booking requests
 and the availability function for stage 2, `sql/007_calls.sql` to
 `sql/009_retention.sql` the call table, the outcome view and the retention
-function for stage 4. The password for `hotel_app` is
+function for stage 4. `sql/010_team_role.sql` and `sql/011_team_database.sql`
+add the role and the database for the team area of stage 5. The passwords are
 set interactively with `\password`.
 
 ### 3. n8n
@@ -415,13 +425,21 @@ file runs inside a transaction that is rolled back at the end, and a failing
 | `03_privileges.sql` | `hotel_app` may only read and insert, owns nothing, and the functions are not open to every role |
 | `04_call_results.sql` | `anruf_ergebnisse` derives booking request, callback or information for each call |
 | `05_retention.sql` | `alte_daten_loeschen()`, called as `hotel_app`, deletes only rows older than 30 or 90 days |
+| `06_team_role.sql` | `hotel_team` may read requests, callbacks and calls and change only the status of a booking request or a callback |
+| `07_team_database.sql` | Each role connects only to the database it needs, and Django owns only its own database `team` |
 
-A second job, `Hygiene`, checks that every JSON file in the repository parses
+A second job, `API`, runs the tests of the team area's Django REST API with
+pytest against the same fresh PostgreSQL 16, connected through the real
+`hotel_team` role. They check that nothing is visible without login, that only
+the status can be changed, that login and every change need a CSRF token and
+that repeated failed logins are slowed down.
+
+A third job, `Hygiene`, checks that every JSON file in the repository parses
 and scans the whole git history for secrets with
 [gitleaks](https://github.com/gitleaks/gitleaks), in a fixed version checked
 against its SHA-256. The one known false positive, the empty
 `POSTGRES_PASSWORD=` in `server/.env.example`, is listed by fingerprint in
-`.gitleaksignore`. Both jobs are required checks for `main`.
+`.gitleaksignore`. All three jobs are required checks for `main`.
 
 The agent itself is tested in ElevenLabs (see [Model choice](#model-choice)),
 the workflows with curl as shown above.
@@ -570,3 +588,6 @@ misread.
    derive the outcome with SQL and delete requests after 30 days. Every call
    is rated against three evaluation criteria, and a weekly report lists the
    calls that did not pass
+5. **Team area** (in progress): a page for the hotel team with the open
+   booking and callback requests and their status, backed by a Django REST API
+   with its own database role

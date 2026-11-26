@@ -49,7 +49,7 @@ class BookingRequest(StatusMixin, models.Model):
     class Meta:
         managed = False
         db_table = "buchungsanfragen"
-        ordering = ["-created_at"]
+        ordering = ["created_at", "id"]
 
     def __str__(self):
         return f"BookingRequest {self.id} ({self.status})"
@@ -73,7 +73,7 @@ class Callback(StatusMixin, models.Model):
     class Meta:
         managed = False
         db_table = "rueckrufe"
-        ordering = ["-created_at"]
+        ordering = ["created_at", "id"]
 
     def __str__(self):
         return f"Callback {self.id} ({self.status})"

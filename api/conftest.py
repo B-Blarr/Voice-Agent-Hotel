@@ -40,12 +40,30 @@ def hotel_rows():
         )
         booking_id = cursor.fetchone()[0]
         cursor.execute(
+            """
+            INSERT INTO buchungsanfragen (erstellt_am, kategorie, anreise, abreise, erwachsene, name, email, quelle)
+            VALUES (now() - interval '1 day', 'einzelzimmer', '2027-12-01', '2027-12-03', 1, 'Frueher Gast', 'gast@example.com', 'website')
+            RETURNING id
+            """
+        )
+        older_booking_id = cursor.fetchone()[0]
+        cursor.execute(
             "INSERT INTO rueckrufe (name, telefon, anliegen) VALUES ('Test Gast', '0000', 'Frage zum Parken') RETURNING id"
         )
         callback_id = cursor.fetchone()[0]
+        cursor.execute(
+            "INSERT INTO rueckrufe (erstellt_am, name, telefon, anliegen) "
+            "VALUES (now() - interval '1 day', 'Frueher Gast', '0000', 'Frage zum Fruehstueck') RETURNING id"
+        )
+        older_callback_id = cursor.fetchone()[0]
         # Until the end of the test transaction, PostgreSQL checks the rights of hotel_team.
         cursor.execute("SET LOCAL ROLE hotel_team")
-    return {"booking_id": booking_id, "callback_id": callback_id}
+    return {
+        "booking_id": booking_id,
+        "older_booking_id": older_booking_id,
+        "callback_id": callback_id,
+        "older_callback_id": older_callback_id,
+    }
 
 
 @pytest.fixture

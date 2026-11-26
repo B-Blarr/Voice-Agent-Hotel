@@ -29,6 +29,18 @@ def test_list_and_filter_by_status(hotel_rows, team_client):
     assert hotel_rows["booking_id"] not in [row["id"] for row in confirmed]
 
 
+@pytest.mark.parametrize(
+    "url, older, newer",
+    [
+        ("/api/booking-requests/", "older_booking_id", "booking_id"),
+        ("/api/callbacks/", "older_callback_id", "callback_id"),
+    ],
+)
+def test_oldest_first(hotel_rows, team_client, url, older, newer):
+    ids = [row["id"] for row in team_client.get(url).json()]
+    assert ids.index(hotel_rows[older]) < ids.index(hotel_rows[newer])
+
+
 def test_set_status(hotel_rows, team_client):
     url = f"/api/booking-requests/{hotel_rows['booking_id']}/"
     response = team_client.patch(url, {"status": "bestaetigt"}, format="json")

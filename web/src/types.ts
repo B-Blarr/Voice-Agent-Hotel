@@ -9,4 +9,7 @@ export type BookingRequest = {
   separate_beds: boolean;
   accessible: boolean;
   name: string;
+  phone: string | null;
+  email: string | null;
+  wishes: string | null;
 };

@@ -12,6 +12,9 @@ const firstRequest: BookingRequest = {
   separate_beds: true,
   accessible: false,
   name: 'Anna Beispiel',
+  phone: '+49 000 0000001',
+  email: null,
+  wishes: 'Waldblick, ruhiges Zimmer',
 };
 
 const secondRequest: BookingRequest = {
@@ -25,6 +28,9 @@ const secondRequest: BookingRequest = {
   separate_beds: false,
   accessible: true,
   name: 'Familie Muster',
+  phone: null,
+  email: 'familie.muster@example.com',
+  wishes: null,
 };
 
 export function App() {

@@ -22,7 +22,13 @@ export function RequestCard({ request }: RequestCardProps) {
       <button type="button" onClick={() => setShowDetails(!showDetails)}>
         {showDetails ? 'Details ausblenden' : 'Details anzeigen'}
       </button>
-      {showDetails && <p>Hier kommen gleich Telefon, Mail und Wünsche hin.</p>}
+      {showDetails && (
+        <div>
+          {request.phone && <p>Telefon: {request.phone}</p>}
+          {request.email && <p>E-Mail: {request.email}</p>}
+          {request.wishes && <p>Wünsche: {request.wishes}</p>}
+        </div>
+      )}
     </article>
   );
 }

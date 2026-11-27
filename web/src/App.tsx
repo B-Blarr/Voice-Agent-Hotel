@@ -47,8 +47,7 @@ export function App() {
       setError('Der Status konnte nicht geändert werden.');
       return;
     }
-    const updated: BookingRequest = await response.json();
-    setRequests((current) => current.map((request) => (request.id === id ? updated : request)));
+    setRequests((current) => current.filter((request) => request.id !== id));
   }
 
   return (

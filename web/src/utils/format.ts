@@ -1,3 +1,5 @@
+import type { BookingStatus } from '../types';
+
 /** Turns an ISO date like 2027-11-20 into the German format 20.11.2027. */
 export function formatDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-');
@@ -15,6 +17,17 @@ export function formatCategory(category: string): string {
   return CATEGORY_LABELS[category] ?? category;
 }
 
+const STATUS_LABELS: Record<BookingStatus, string> = {
+  offen: 'Offen',
+  bestaetigt: 'Bestätigt',
+  abgelehnt: 'Abgelehnt',
+};
+
+export function formatStatus(status: BookingStatus): string {
+  return STATUS_LABELS[status];
+}
+
+/** Describes who is travelling, like "2 Erwachsene, 1 Kind, 1 Baby". Children and babies only appear if there are any. */
 export function formatGuests(adults: number, children: number, babies: number): string {
   const parts: string[] = [];
   parts.push(`${adults} ${adults === 1 ? 'Erwachsener' : 'Erwachsene'}`);

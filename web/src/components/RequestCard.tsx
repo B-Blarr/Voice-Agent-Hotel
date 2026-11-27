@@ -1,5 +1,5 @@
 import type { BookingRequest } from '../types';
-import { formatCategory, formatDate, formatGuests } from '../utils/format';
+import { formatCategory, formatDate, formatGuests, formatStatus } from '../utils/format';
 import { useState } from 'react';
 
 type RequestCardProps = {
@@ -16,6 +16,7 @@ export function RequestCard({ request }: RequestCardProps) {
         {formatDate(request.arrival)} bis {formatDate(request.departure)}
       </p>
       <p>{request.name}</p>
+      <p>Status: {formatStatus(request.status)}</p>
       <p>{formatGuests(request.adults, request.children, request.babies)}</p>
       {request.accessible && <p>Barrierefrei</p>}
       {request.separate_beds && <p>Getrennte Betten</p>}

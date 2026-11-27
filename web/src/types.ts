@@ -12,4 +12,7 @@ export type BookingRequest = {
   phone: string | null;
   email: string | null;
   wishes: string | null;
+  status: BookingStatus;
 };
+
+export type BookingStatus = 'offen' | 'bestaetigt' | 'abgelehnt';

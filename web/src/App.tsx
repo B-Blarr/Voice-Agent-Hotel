@@ -14,29 +14,42 @@ export function App() {
   const today = new Date().toLocaleDateString('de-DE');
 
   useEffect(() => {
+    let ignore = false;
     async function loadRequests() {
       try {
         const response = await fetch(`/api/booking-requests/?status=${statusFilter}`);
+        if (ignore) {
+          return;
+        }
         if (!response.ok) {
           console.error(`Loading the booking requests failed with status ${response.status}`);
           setError('Die Buchungsanfragen konnten nicht geladen werden.');
           return;
         }
         const data: BookingRequest[] = await response.json();
+        if (ignore) {
+          return;
+        }
         setRequests(data);
       } finally {
-        setIsLoading(false);
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
     }
     loadRequests();
+
+    return () => {
+      ignore = true;
+    };
   }, [statusFilter]);
 
   function selectFilter(status: BookingStatus) {
-  setStatusFilter(status);
-  setRequests([]);
-  setError(null);
-  setIsLoading(true);
-}
+    setStatusFilter(status);
+    setRequests([]);
+    setError(null);
+    setIsLoading(true);
+  }
 
   async function changeStatus(id: number, status: BookingStatus) {
     const response = await fetch(`/api/booking-requests/${id}/`, {

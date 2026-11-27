@@ -5,20 +5,24 @@ import type { BookingRequest } from './types';
 export function App() {
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const today = new Date().toLocaleDateString('de-DE');
 
   useEffect(() => {
     async function loadRequests() {
-      const response = await fetch('/api/booking-requests/');
-      if (!response.ok) {
-        console.error(`Loading the booking requests failed with status ${response.status}`);
-        setError('Die Buchungsanfragen konnten nicht geladen werden.')
-        return;
+      try {
+        const response = await fetch('/api/booking-requests/');
+        if (!response.ok) {
+          console.error(`Loading the booking requests failed with status ${response.status}`);
+          setError('Die Buchungsanfragen konnten nicht geladen werden.');
+          return;
+        }
+        const data: BookingRequest[] = await response.json();
+        setRequests(data);
+      } finally {
+        setIsLoading(false);
       }
-      const data: BookingRequest[] = await response.json();
-      setRequests(data);
     }
-
     loadRequests();
   }, []);
 
@@ -27,6 +31,7 @@ export function App() {
       <h1>Hotel Elmblick</h1>
       <p>Teambereich</p>
       <p>Heute ist {today}</p>
+      {isLoading && <p role="status">Die Buchungsanfragen werden geladen</p>}
       {error && <p role="alert">{error}</p>}
       {requests.map((request) => (
         <RequestCard key={request.id} request={request} />

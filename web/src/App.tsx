@@ -31,6 +31,13 @@ export function App() {
     loadRequests();
   }, [statusFilter]);
 
+  function selectFilter(status: BookingStatus) {
+  setStatusFilter(status);
+  setRequests([]);
+  setError(null);
+  setIsLoading(true);
+}
+
   async function changeStatus(id: number, status: BookingStatus) {
     const response = await fetch(`/api/booking-requests/${id}/`, {
       method: 'PATCH',
@@ -61,7 +68,7 @@ export function App() {
             key={status}
             type="button"
             aria-pressed={status === statusFilter}
-            onClick={() => setStatusFilter(status)}
+            onClick={() => selectFilter(status)}
           >
             {formatStatus(status)}
           </button>

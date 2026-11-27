@@ -28,6 +28,11 @@ export function RequestCard({ request, onStatusChange }: RequestCardProps) {
           </button>
         </div>
       )}
+      {request.status !== 'offen' && (
+        <button type="button" onClick={() => onStatusChange(request.id, 'offen')}>
+          Wieder öffnen
+        </button>
+      )}
       <p>{formatGuests(request.adults, request.children, request.babies)}</p>
       {request.accessible && <p>Barrierefrei</p>}
       {request.separate_beds && <p>Getrennte Betten</p>}

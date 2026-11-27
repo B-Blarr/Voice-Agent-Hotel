@@ -2,30 +2,54 @@ import { useEffect, useState } from 'react';
 import { RequestCard } from './components/RequestCard';
 import type { BookingRequest, BookingStatus } from './types';
 import { getCookie } from './utils/cookies';
+import { formatStatus } from './utils/format';
+
+const STATUS_FILTERS: BookingStatus[] = ['offen', 'bestaetigt', 'abgelehnt'];
 
 export function App() {
   const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<BookingStatus>('offen');
   const today = new Date().toLocaleDateString('de-DE');
 
   useEffect(() => {
+    let ignore = false;
     async function loadRequests() {
       try {
-        const response = await fetch('/api/booking-requests/');
+        const response = await fetch(`/api/booking-requests/?status=${statusFilter}`);
+        if (ignore) {
+          return;
+        }
         if (!response.ok) {
           console.error(`Loading the booking requests failed with status ${response.status}`);
           setError('Die Buchungsanfragen konnten nicht geladen werden.');
           return;
         }
         const data: BookingRequest[] = await response.json();
+        if (ignore) {
+          return;
+        }
         setRequests(data);
       } finally {
-        setIsLoading(false);
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
     }
     loadRequests();
-  }, []);
+
+    return () => {
+      ignore = true;
+    };
+  }, [statusFilter]);
+
+  function selectFilter(status: BookingStatus) {
+    setStatusFilter(status);
+    setRequests([]);
+    setError(null);
+    setIsLoading(true);
+  }
 
   async function changeStatus(id: number, status: BookingStatus) {
     const response = await fetch(`/api/booking-requests/${id}/`, {
@@ -43,8 +67,7 @@ export function App() {
       setError('Der Status konnte nicht geändert werden.');
       return;
     }
-    const updated: BookingRequest = await response.json();
-    setRequests((current) => current.map((request) => (request.id === id ? updated : request)));
+    setRequests((current) => current.filter((request) => request.id !== id));
   }
 
   return (
@@ -52,6 +75,18 @@ export function App() {
       <h1>Hotel Elmblick</h1>
       <p>Teambereich</p>
       <p>Heute ist {today}</p>
+      <div role="group" aria-label="Status">
+        {STATUS_FILTERS.map((status) => (
+          <button
+            key={status}
+            type="button"
+            aria-pressed={status === statusFilter}
+            onClick={() => selectFilter(status)}
+          >
+            {formatStatus(status)}
+          </button>
+        ))}
+      </div>
       {isLoading && <p role="status">Die Buchungsanfragen werden geladen</p>}
       {error && <p role="alert">{error}</p>}
       {!isLoading && !error && requests.length === 0 && (

@@ -33,6 +33,9 @@ export function App() {
       <p>Heute ist {today}</p>
       {isLoading && <p role="status">Die Buchungsanfragen werden geladen</p>}
       {error && <p role="alert">{error}</p>}
+      {!isLoading && !error && requests.length === 0 && (
+        <p role="status">Es gibt keine Buchungsanfragen</p>
+      )}
       {requests.map((request) => (
         <RequestCard key={request.id} request={request} />
       ))}

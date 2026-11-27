@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RequestCard } from './components/RequestCard';
-import type { BookingRequest } from './types';
+import type { BookingRequest, BookingStatus } from './types';
+import { getCookie } from './utils/cookies';
 
 export function App() {
   const [requests, setRequests] = useState<BookingRequest[]>([]);
@@ -26,6 +27,26 @@ export function App() {
     loadRequests();
   }, []);
 
+  async function changeStatus(id: number, status: BookingStatus) {
+    const response = await fetch(`/api/booking-requests/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken') ?? '',
+      },
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      console.error(
+        `Changing the status of booking request ${id} failed with status ${response.status}`,
+      );
+      setError('Der Status konnte nicht geändert werden.');
+      return;
+    }
+    const updated: BookingRequest = await response.json();
+    setRequests((current) => current.map((request) => (request.id === id ? updated : request)));
+  }
+
   return (
     <main>
       <h1>Hotel Elmblick</h1>
@@ -37,7 +58,7 @@ export function App() {
         <p role="status">Es gibt keine Buchungsanfragen</p>
       )}
       {requests.map((request) => (
-        <RequestCard key={request.id} request={request} />
+        <RequestCard key={request.id} request={request} onStatusChange={changeStatus} />
       ))}
     </main>
   );

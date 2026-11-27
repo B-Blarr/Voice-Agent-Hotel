@@ -1,13 +1,14 @@
-import type { BookingRequest } from '../types';
-import { formatCategory, formatDate, formatGuests } from '../utils/format';
+import type { BookingRequest, BookingStatus } from '../types';
+import { formatCategory, formatDate, formatGuests, formatStatus } from '../utils/format';
 import { useState } from 'react';
 
 type RequestCardProps = {
   request: BookingRequest;
+  onStatusChange: (id: number, status: BookingStatus) => void;
 };
 
-/** Describes who is travelling, like "2 Erwachsene, 1 Kind, 1 Baby". Children and babies only appear if there are any. */
-export function RequestCard({ request }: RequestCardProps) {
+/** Shows one booking request and lets the team confirm or decline it while it is open. */
+export function RequestCard({ request, onStatusChange }: RequestCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   return (
     <article>
@@ -16,6 +17,17 @@ export function RequestCard({ request }: RequestCardProps) {
         {formatDate(request.arrival)} bis {formatDate(request.departure)}
       </p>
       <p>{request.name}</p>
+      <p>Status: {formatStatus(request.status)}</p>
+      {request.status === 'offen' && (
+        <div>
+          <button type="button" onClick={() => onStatusChange(request.id, 'bestaetigt')}>
+            Bestätigen
+          </button>
+          <button type="button" onClick={() => onStatusChange(request.id, 'abgelehnt')}>
+            Ablehnen
+          </button>
+        </div>
+      )}
       <p>{formatGuests(request.adults, request.children, request.babies)}</p>
       {request.accessible && <p>Barrierefrei</p>}
       {request.separate_beds && <p>Getrennte Betten</p>}
